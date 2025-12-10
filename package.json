@@ -6,10 +6,7 @@
     "scripts": {
         "build": "tsc",
         "start": "node dist/index.js",
-        "dev": "ts-node src/index.ts",
-        "lint": "eslint \"src/**/*.ts\"",
-        "health-check": "curl -f http://localhost:$PORT/health || exit 1",
-        "test": "node dist/index.js"
+        "dev": "ts-node src/index.ts"
     },
     "keywords": [
         "whatsapp",
