@@ -1,0 +1,28 @@
+XPE-BOT Control Panel - Licencia de Uso
+
+© 2025 XPE-TEAM. Todos los derechos reservados.
+
+Este software es propiedad intelectual de XPE-TEAM y está protegido por las leyes de copyright internacionales.
+
+CONDICIONES DE LICENCIA:
+
+1. Uso Permitido:
+   - Este software puede ser utilizado únicamente por usuarios autorizados.
+   - Cada licencia está vinculada a un identificador de hardware (HWID) único.
+   - La redistribución no autorizada está prohibida.
+
+2. Restricciones:
+   - No se permite la modificación del código fuente.
+   - No se permite la ingeniería inversa del software.
+   - No se permite la distribución sin autorización escrita.
+
+3. Garantía:
+   - Este software se proporciona "tal cual" sin garantías expresas o implícitas.
+   - XPE-TEAM no se hace responsable de daños directos o indirectos.
+
+4. Terminación:
+   - Esta licencia se revocará automáticamente si se viola cualquiera de las condiciones.
+
+Para obtener información sobre licencias comerciales, contacta a XPE-TEAM.
+
+Fecha de emisión: Diciembre 2025
