@@ -1,7 +1,7 @@
 {
   "name": "xpe-bot-panel",
-  "version": "1.0.0",
-  "description": "Panel de control para XPE-BOT",
+  "version": "2.0.0",
+  "description": "Panel de control para XPE-BOT con Editor IA",
   "main": "src/main.js",
   "type": "module",
   "scripts": {
@@ -15,9 +15,7 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "node-machine-id": "^1.1.12",
-    "@whiskeysockets/baileys": "^6.5.0",
-    "pino": "^8.16.0"
+    "node-machine-id": "^1.1.12"
   },
   "build": {
     "appId": "com.xpeteam.xpebotpanel",
