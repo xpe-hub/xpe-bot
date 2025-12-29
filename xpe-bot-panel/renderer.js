@@ -57,6 +57,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Configurar editor de texto
     setupTextEditor();
 
+    // Escuchar cuando se configure la ruta del bot
+    window.electronAPI.onBotPathConfigured((botPath) => {
+        if (botPath) {
+            appState.botPath = botPath;
+            const botPathInput = document.getElementById('botPath');
+            const botsViewPath = document.getElementById('botsViewPath');
+            if (botPathInput) botPathInput.value = botPath;
+            if (botsViewPath) botsViewPath.value = botPath;
+            showNotification('Ruta del bot configurada', 'success');
+            addLogToBox(`Ruta: ${botPath}`, 'info');
+        }
+    });
+
     // Obtener versión
     const version = await window.electronAPI.getAppVersion();
     console.log('[Panel] Version:', version);

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     // Licencias
@@ -66,6 +66,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onBotLog: (callback) => {
         ipcRenderer.removeAllListeners('bot:log');
         ipcRenderer.on('bot:log', (event, data) => callback(data));
+    },
+    onBotPathConfigured: (callback) => {
+        ipcRenderer.removeAllListeners('bot:path-configured');
+        ipcRenderer.on('bot:path-configured', (event, botPath) => callback(botPath));
     },
     onBotQR: (callback) => {
         ipcRenderer.removeAllListeners('bot-qr');

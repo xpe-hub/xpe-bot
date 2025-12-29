@@ -220,6 +220,26 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
+
+    // Pedir ruta del bot al inicio
+    setTimeout(async () => {
+      const config = loadConfig();
+      if (!config.botPath) {
+        const result = await dialog.showOpenDialog(mainWindow, {
+          title: 'Seleccionar Carpeta del Bot',
+          message: 'Por favor selecciona la carpeta donde está tu bot de WhatsApp',
+          properties: ['openDirectory']
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+          const botPath = result.filePaths[0];
+          config.botPath = botPath;
+          saveConfig(config);
+          addLog('success', `Ruta configurada: ${botPath}`);
+          mainWindow.webContents.send('bot:path-configured', botPath);
+        }
+      }
+    }, 500);
   });
 
   mainWindow.on('closed', () => {
