@@ -1,76 +1,25 @@
 {
-  "name": "xpe-bot-control-panel",
-  "version": "2.0.0",
-  "description": "Panel de control visual completo para XPE-BOT con gestión de sub-bots, admins, VIPs, monitoreo de mensajes, IA y estadísticas",
+  "name": "xpe-bot-panel",
+  "version": "1.0.0",
+  "description": "Panel de control para XPE-BOT",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win --x64",
-    "build:dir": "electron-builder --dir"
+    "build": "electron-builder --win --x64"
   },
-  "keywords": ["xpe-bot", "whatsapp", "bot", "control-panel", "hwid", "subbots", "management"],
   "author": "XPE-TEAM",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0",
+    "electron": "^27.0.0",
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.5.0",
-    "node-machine-id": "^1.1.12",
-    "axios": "^1.6.2",
-    "qrcode": "^1.5.3"
+    "node-machine-id": "^1.1.12"
   },
   "build": {
     "appId": "com.xpeteam.xpebotpanel",
-    "productName": "XPE-BOT Control Panel",
-    "version": "1.0.0",
-    "win": {
-      "target": ["nsis", "portable"],
-      "icon": "assets/icon.ico",
-      "artifactName": "XPE-BOT-Panel-Setup-${version}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico",
-      "license": "assets/LICENSE.txt",
-      "runAfterFinish": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "portable": {
-      "artifactName": "XPE-BOT-Panel-Portable-${version}.${ext}"
-    },
-    "directories": {
-      "output": "dist",
-      "buildResources": "assets"
-    },
-    "files": [
-      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,readme.txt}",
-      "!**/node_modules/*/{test,__tests__}",
-      "!**/node_modules/*/*.ts",
-      "!**/node_modules/.bin",
-      "assets/**/*",
-      "src/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "assets/",
-        "to": "assets/"
-      },
-      {
-        "from": "../bot-xpe-nett-completo-v3-WORKING/bot-xpe-nett-completo",
-        "to": "bot",
-        "filter": ["**/*", "!node_modules/**/*"]
-      }
-    ],
-    "publish": {
-      "provider": "generic",
-      "url": "https://updates.xpeteam.com/"
-    }
+    "productName": "XPE-BOT Panel",
+    "win": { "target": "nsis", "icon": "assets/icon.ico" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
   }
 }
