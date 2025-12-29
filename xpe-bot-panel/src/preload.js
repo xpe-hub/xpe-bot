@@ -1,10 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // Licencias
-    getHWID: () => ipcRenderer.invoke('get-hwid'),
-    activateLicense: (licenseKey) => ipcRenderer.invoke('activate-license', licenseKey),
-    checkSavedLicense: () => ipcRenderer.invoke('check-saved-license'),
+    // Usuarios
+    loginUser: (username) => ipcRenderer.invoke('user:login', username),
+    getCurrentUser: () => ipcRenderer.invoke('user:get-current'),
+    getAllUsers: () => ipcRenderer.invoke('user:get-all'),
+    logoutUser: () => ipcRenderer.invoke('user:logout'),
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
     // Bot Controls

@@ -1,10 +1,7 @@
 // XPE-BOT Panel - Lógica de la Interfaz
 
 let appState = {
-    isLicensed: false,
-    licenseType: null,
-    permissions: [],
-    hwid: null,
+    currentUser: null,
     stats: { totalMessages: 0, totalCommands: 0, totalUsers: 0 },
     botPath: '',
     currentFile: null,
@@ -17,7 +14,7 @@ let appState = {
 const elements = {
     loginScreen: null,
     mainContent: null,
-    licenseInput: null,
+    usernameInput: null,
     notification: null,
     fileExplorer: null,
     codeEditor: null,
@@ -31,22 +28,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cache elementos
     elements.loginScreen = document.getElementById('loginScreen');
     elements.mainContent = document.getElementById('mainContent');
-    elements.licenseInput = document.getElementById('licenseInput');
+    elements.usernameInput = document.getElementById('usernameInput');
     elements.notification = document.getElementById('notification');
     elements.fileExplorer = document.getElementById('fileExplorer');
     elements.codeEditor = document.getElementById('codeEditor');
     elements.aiPrompt = document.getElementById('aiPrompt');
     elements.aiResponse = document.getElementById('aiResponse');
 
-    // Enter en licencia
-    if (elements.licenseInput) {
-        elements.licenseInput.addEventListener('keypress', (e) => {
+    // Enter en nombre de usuario
+    if (elements.usernameInput) {
+        elements.usernameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
         });
     }
 
-    // Verificar licencia guardada
-    await checkSavedLicense();
+    // Verificar usuario guardado
+    await checkSavedUser();
 
     // Cargar ruta guardada del bot
     await loadSavedBotPath();
@@ -75,44 +72,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Panel] Version:', version);
 });
 
-async function checkSavedLicense() {
+async function checkSavedUser() {
     try {
-        const result = await window.electronAPI.checkSavedLicense();
-        if (result.valid) {
-            appState.isLicensed = true;
-            appState.licenseType = result.type;
-            showNotification('Licencia: ' + result.type, 'success');
+        const result = await window.electronAPI.getCurrentUser();
+        if (result.user) {
+            appState.currentUser = result.user;
+            showNotification('¡Bienvenido de nuevo, ' + result.user.username + '!', 'success');
             showMainInterface();
         }
     } catch (error) {
-        console.error('[Panel] Error licencia:', error);
+        console.error('[Panel] Error usuario:', error);
     }
 }
 
 async function login() {
-    const licenseKey = elements.licenseInput?.value.trim();
+    const username = elements.usernameInput?.value.trim();
 
-    if (!licenseKey) {
-        showNotification('Ingresa la licencia', 'warning');
+    if (!username) {
+        showNotification('Ingresa tu nombre de usuario', 'warning');
         return;
     }
 
     try {
-        showNotification('Validando...', 'info');
-        const result = await window.electronAPI.activateLicense(licenseKey);
+        showNotification('Iniciando sesión...', 'info');
+        const result = await window.electronAPI.loginUser(username);
 
-        if (result.valid) {
-            appState.isLicensed = true;
-            appState.licenseType = result.type;
-            appState.permissions = result.permissions || [];
+        if (result.success) {
+            appState.currentUser = result.user;
             showNotification(result.message, 'success');
             showMainInterface();
         } else {
-            showNotification(result.error || 'Licencia inválida', 'error');
+            showNotification(result.error || 'Error al iniciar sesión', 'error');
         }
     } catch (error) {
         console.error('[Panel] Error login:', error);
-        showNotification('Error validando', 'error');
+        showNotification('Error al iniciar sesión', 'error');
     }
 }
 

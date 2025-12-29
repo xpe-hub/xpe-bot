@@ -14,14 +14,12 @@ let botProcess = null;
 let botLogs = [];
 const MAX_LOGS = 100;
 
-// Licencia y base de datos
-let mainWindow;
-let isLicenseValidated = false;
-let licenseData = null;
+// Usuario actual
+let currentUser = null;
 
-const LICENSE_DIR = path.join(app.getPath('userData'), 'licenses');
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
-const APP_VERSION = '1.0.0';
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const APP_VERSION = '2.0.0';
 
 let db = { admins: [], vips: [], stats: { messages: 0, commands: 0, users: new Set(), dailyStats: {} } };
 
@@ -49,7 +47,6 @@ const SENSITIVE_PATTERNS = [
 // ========== FUNCIONES DE BASE DE DATOS ==========
 
 function ensureDirectories() {
-  if (!fs.existsSync(LICENSE_DIR)) fs.mkdirSync(LICENSE_DIR, { recursive: true });
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
@@ -279,46 +276,77 @@ app.on('before-quit', () => {
   }
 });
 
-// ========== IPC HANDLERS - LICENCIA ==========
+// ========== IPC HANDLERS - USUARIOS ==========
 
-ipcMain.handle('get-hwid', () => {
-  return generateSecureHWID();
-});
-
-ipcMain.handle('activate-license', (event, key) => {
-  const cleanKey = key.trim().toUpperCase();
-  const licenses = {
-    'XPE-ADMIN-MASTER-2025': { type: 'ADMIN', permissions: ['*'], days: -1 },
-    'XPE-SELLER-PRO-2025': { type: 'SELLER', permissions: ['bot', 'panel'], days: 30 }
-  };
-
-  let result;
-  if (licenses[cleanKey]) {
-    const lic = licenses[cleanKey];
-    result = { valid: true, type: lic.type, permissions: lic.permissions, message: `Licencia ${lic.type} activada` };
-  } else {
-    const licenseFile = path.join(LICENSE_DIR, `${cleanKey}.json`);
-    if (fs.existsSync(licenseFile)) {
-      const savedLic = JSON.parse(fs.readFileSync(licenseFile, 'utf8'));
-      if (new Date() > new Date(savedLic.expires)) {
-        result = { valid: false, error: 'Licencia vencida' };
-      } else {
-        result = { valid: true, type: savedLic.type, permissions: savedLic.permissions, message: `Licencia ${savedLic.type} activada` };
+ipcMain.handle('user:login', (event, username) => {
+  const cleanUsername = username.trim();
+  
+  if (!cleanUsername || cleanUsername.length < 2) {
+    return { success: false, error: 'El nombre debe tener al menos 2 caracteres' };
+  }
+  
+  try {
+    // Cargar usuarios existentes o crear nuevo
+    let users = {};
+    if (fs.existsSync(USERS_FILE)) {
+      try {
+        users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+      } catch (e) {
+        users = {};
       }
-    } else {
-      result = { valid: false, error: 'Licencia inválida' };
     }
+    
+    // Crear o actualizar usuario
+    const now = new Date().toISOString();
+    if (!users[cleanUsername]) {
+      users[cleanUsername] = {
+        username: cleanUsername,
+        createdAt: now,
+        lastLogin: now,
+        loginCount: 1
+      };
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    } else {
+      users[cleanUsername].lastLogin = now;
+      users[cleanUsername].loginCount = (users[cleanUsername].loginCount || 0) + 1;
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    }
+    
+    currentUser = users[cleanUsername];
+    
+    addLog('success', `Usuario '${cleanUsername}' ha iniciado sesión`);
+    return { 
+      success: true, 
+      user: currentUser,
+      message: `¡Bienvenido, ${cleanUsername}!` 
+    };
+    
+  } catch (error) {
+    addLog('error', `Error en login: ${error.message}`);
+    return { success: false, error: error.message };
   }
-
-  if (result.valid) {
-    isLicenseValidated = true;
-    licenseData = result;
-  }
-  return result;
 });
 
-ipcMain.handle('check-saved-license', () => {
-  return { valid: isLicenseValidated, type: licenseData?.type || null };
+ipcMain.handle('user:get-current', () => {
+  return { user: currentUser };
+});
+
+ipcMain.handle('user:get-all', () => {
+  try {
+    if (!fs.existsSync(USERS_FILE)) {
+      return { success: true, users: [] };
+    }
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    const userList = Object.values(users);
+    return { success: true, users: userList };
+  } catch (error) {
+    return { success: false, error: error.message, users: [] };
+  }
+});
+
+ipcMain.handle('user:logout', () => {
+  currentUser = null;
+  return { success: true };
 });
 
 ipcMain.handle('get-app-version', () => {
