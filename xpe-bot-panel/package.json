@@ -1,7 +1,7 @@
 {
   "name": "xpe-bot-control-panel",
-  "version": "1.0.0",
-  "description": "Panel de control visual y seguro para XPE-BOT con protección HWID",
+  "version": "2.0.0",
+  "description": "Panel de control visual completo para XPE-BOT con gestión de sub-bots, admins, VIPs, monitoreo de mensajes, IA y estadísticas",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -9,7 +9,7 @@
     "build:win": "electron-builder --win --x64",
     "build:dir": "electron-builder --dir"
   },
-  "keywords": ["xpe-bot", "whatsapp", "bot", "control-panel", "hwid"],
+  "keywords": ["xpe-bot", "whatsapp", "bot", "control-panel", "hwid", "subbots", "management"],
   "author": "XPE-TEAM",
   "license": "MIT",
   "devDependencies": {
@@ -17,8 +17,10 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.5.0",
     "node-machine-id": "^1.1.12",
-    "axios": "^1.6.2"
+    "axios": "^1.6.2",
+    "qrcode": "^1.5.3"
   },
   "build": {
     "appId": "com.xpeteam.xpebotpanel",

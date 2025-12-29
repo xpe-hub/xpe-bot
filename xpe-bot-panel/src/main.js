@@ -1,77 +1,130 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { machineIdSync } = require('node-machine-id');
 const crypto = require('crypto');
 const childProcess = require('child_process');
 
+// Importar motores del bot
+const { createBotInstance, botInstances, messageHandlers } = require('./src/bot-engine');
+
 let mainWindow;
-let botProcess = null;
-let botPath = null;
 let isLicenseValidated = false;
 let licenseData = null;
 
 // Constantes de seguridad
 const LICENSE_DIR = path.join(app.getPath('userData'), 'licenses');
+const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const HWID_CACHE_FILE = path.join(app.getPath('userData'), 'hwid.json');
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '2.0.0';
+
+// Base de datos local
+let db = {
+    admins: [],
+    vips: [],
+    stats: {
+        messages: 0,
+        commands: 0,
+        users: new Set(),
+        dailyStats: {}
+    }
+};
+
+// ==========================================
+// SISTEMA DE BASE DE DATOS LOCAL
+// ==========================================
+
+function ensureDirectories() {
+    const dirs = [LICENSE_DIR, DATA_DIR, path.join(DATA_DIR, 'sessions')];
+    dirs.forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    });
+}
+
+function loadDatabase() {
+    try {
+        const adminsFile = path.join(DATA_DIR, 'admins.json');
+        const vipsFile = path.join(DATA_DIR, 'vips.json');
+        const statsFile = path.join(DATA_DIR, 'stats.json');
+
+        if (fs.existsSync(adminsFile)) {
+            db.admins = JSON.parse(fs.readFileSync(adminsFile, 'utf8'));
+        }
+        if (fs.existsSync(vipsFile)) {
+            db.vips = JSON.parse(fs.readFileSync(vipsFile, 'utf8'));
+        }
+        if (fs.existsSync(statsFile)) {
+            const stats = JSON.parse(fs.readFileSync(statsFile, 'utf8'));
+            db.stats = { ...db.stats, ...stats, users: new Set(stats.users || []) };
+        }
+
+        console.log('[Panel] Base de datos cargada');
+    } catch (error) {
+        console.error('[Panel] Error cargando base de datos:', error);
+    }
+}
+
+function saveDatabase() {
+    try {
+        fs.writeFileSync(
+            path.join(DATA_DIR, 'admins.json'),
+            JSON.stringify(db.admins, null, 2)
+        );
+        fs.writeFileSync(
+            path.join(DATA_DIR, 'vips.json'),
+            JSON.stringify(db.vips, null, 2)
+        );
+        fs.writeFileSync(
+            path.join(DATA_DIR, 'stats.json'),
+            JSON.stringify({
+                ...db.stats,
+                users: Array.from(db.stats.users)
+            }, null, 2)
+        );
+    } catch (error) {
+        console.error('[Panel] Error guardando base de datos:', error);
+    }
+}
 
 // ==========================================
 // SISTEMA DE SEGURIDAD HWID
 // ==========================================
 
-/**
- * Genera un identificador de hardware único y seguro
- * Combina múltiples fuentes para mayor seguridad
- */
 function generateSecureHWID() {
     try {
-        // Obtener machine ID base
-        const machineId = machineIdSync(true);
+        const { machineIdSync } = require('node-machine-id');
+        const os = require('os');
 
-        // Información adicional del sistema
+        const machineId = machineIdSync(true);
         const systemInfo = {
             platform: process.platform,
-            arch: process.arch,
-            hostname: require('os').hostname(),
-            totalMemory: require('os').totalmem(),
-            cpus: require('os').cpus().length
+            hostname: os.hostname(),
+            totalMemory: os.totalmem(),
+            cpus: os.cpus().length
         };
 
-        // Crear hash combinado
         const combinedString = `${machineId}-${JSON.stringify(systemInfo)}`;
         const hwidHash = crypto.createHash('sha256')
             .update(combinedString)
             .digest('hex')
             .toUpperCase();
 
-        // Formato: XPE-{HASH}
         return `XPE-${hwidHash.substring(0, 16)}-${hwidHash.substring(16, 24)}`;
     } catch (error) {
-        console.error('Error generando HWID:', error);
         return `XPE-ERROR-${Date.now()}`;
     }
 }
 
-/**
- * Cachea el HWID para uso offline
- */
 function cacheHWID(hwid) {
-    try {
-        const cacheData = {
-            hwid: hwid,
-            timestamp: Date.now(),
-            expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 días
-        };
-        fs.writeFileSync(HWID_CACHE_FILE, JSON.stringify(cacheData, null, 2));
-    } catch (error) {
-        console.error('Error cacheando HWID:', error);
-    }
+    const cacheData = {
+        hwid: hwid,
+        timestamp: Date.now(),
+        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+    };
+    fs.writeFileSync(HWID_CACHE_FILE, JSON.stringify(cacheData, null, 2));
 }
 
-/**
- * Recupera el HWID cacheado
- */
 function getCachedHWID() {
     try {
         if (fs.existsSync(HWID_CACHE_FILE)) {
@@ -80,9 +133,7 @@ function getCachedHWID() {
                 return cacheData.hwid;
             }
         }
-    } catch (error) {
-        console.error('Error leyendo HWID cacheado:', error);
-    }
+    } catch (error) {}
     return null;
 }
 
@@ -90,19 +141,13 @@ function getCachedHWID() {
 // SISTEMA DE LICENCIAS
 // ==========================================
 
-/**
- * Asegura que existe el directorio de licencias
- */
 function ensureLicenseDirectory() {
     if (!fs.existsSync(LICENSE_DIR)) {
         fs.mkdirSync(LICENSE_DIR, { recursive: true });
     }
 }
 
-/**
- * Guarda una licencia validada localmente
- */
-function saveLicense(licenseKey, hwid, type) {
+function saveLicense(licenseKey, hwid, type, permissions) {
     ensureLicenseDirectory();
     const licenseFile = path.join(LICENSE_DIR, 'current.lic');
 
@@ -110,6 +155,7 @@ function saveLicense(licenseKey, hwid, type) {
         licenseKey: licenseKey,
         hwid: hwid,
         type: type,
+        permissions: permissions,
         activatedAt: Date.now(),
         lastCheck: Date.now(),
         version: APP_VERSION
@@ -119,25 +165,49 @@ function saveLicense(licenseKey, hwid, type) {
     return licenseRecord;
 }
 
-/**
- * Carga la licencia guardada localmente
- */
 function loadSavedLicense() {
     try {
         const licenseFile = path.join(LICENSE_DIR, 'current.lic');
         if (fs.existsSync(licenseFile)) {
             return JSON.parse(fs.readFileSync(licenseFile, 'utf8'));
         }
-    } catch (error) {
-        console.error('Error cargando licencia:', error);
-    }
+    } catch (error) {}
     return null;
 }
 
-/**
- * Genera un código de activación para un HWID específico
- * En producción, esto vendría de tu servidor
- */
+function validateLicense(licenseKey, currentHWID) {
+    // Licencias de demostración
+    const demoLicenses = {
+        'XPE-ADMIN-MASTER-2025': {
+            type: 'admin',
+            permissions: ['full', 'license', 'bot', 'subbots', 'admins', 'vips', 'broadcast', 'ai', 'stats'],
+            hwid: null
+        },
+        'XPE-SELLER-PRO-2025': {
+            type: 'seller',
+            permissions: ['bot', 'subbots', 'stats', 'vips'],
+            hwid: null
+        },
+        'XPE-TESTER-DEMO-2025': {
+            type: 'tester',
+            permissions: ['bot', 'stats'],
+            hwid: null
+        }
+    };
+
+    const license = demoLicenses[licenseKey];
+    if (!license) {
+        return { valid: false, error: 'LICENCIA NO RECONOCIDA', hint: 'Verifica la licencia con XPE-TEAM' };
+    }
+
+    return {
+        valid: true,
+        type: license.type,
+        permissions: license.permissions,
+        message: 'Licencia activada correctamente'
+    };
+}
+
 function generateActivationCode(targetHWID) {
     const timestamp = Date.now();
     const signature = crypto
@@ -150,218 +220,56 @@ function generateActivationCode(targetHWID) {
     return `ACT-${targetHWID.substring(4, 12)}-${signature}-${APP_VERSION}`;
 }
 
-/**
- * Valida una licencia con el HWID del equipo
- */
-function validateLicense(licenseKey, currentHWID) {
-    // Licencias de demostración (en producción, validar contra servidor)
-    const demoLicenses = {
-        'XPE-ADMIN-MASTER-2025': {
-            type: 'admin',
-            permissions: ['full', 'license', 'bot', 'config'],
-            hwid: null
-        },
-        'XPE-SELLER-PRO-2025': {
-            type: 'seller',
-            permissions: ['bot', 'stats'],
-            hwid: null
-        },
-        'XPE-TESTER-DEMO-2025': {
-            type: 'tester',
-            permissions: ['bot'],
-            hwid: null
-        }
-    };
-
-    const license = demoLicenses[licenseKey];
-
-    if (!license) {
-        return {
-            valid: false,
-            error: ' LICENCIA NO RECONOCIDA',
-            hint: 'Verifica que hayas escrito la licencia correctamente'
-        };
-    }
-
-    // Si la licencia tiene HWID绑定, verificar coincidencia
-    if (license.hwid && license.hwid !== currentHWID) {
-        return {
-            valid: false,
-            error: 'LICENCIA NO VÁLIDA PARA ESTE EQUIPO',
-            hint: `Esta licencia está registrada para otro dispositivo`
-        };
-    }
-
-    return {
-        valid: true,
-        type: license.type,
-        permissions: license.permissions,
-        message: 'Licencia activada correctamente'
-    };
-}
-
 // ==========================================
-// DETECCIÓN AUTOMÁTICA DEL BOT
+// MOTOR DEL BOT INTEGRADO
 // ==========================================
 
-/**
- * Busca automáticamente la carpeta del bot
- */
-function findBotPath() {
-    const desktop = require('os').homedir();
-    const possiblePaths = [
-        path.join(desktop, 'Desktop', 'bot-xpe-nett-completo-v3-WORKING', 'bot-xpe-nett-completo'),
-        path.join(desktop, 'Desktop', 'bot-xpe-nett-completo'),
-        path.join(desktop, 'Desktop', 'bot-xpe'),
-        path.join(__dirname, '..', '..', 'bot-xpe-nett-completo'),
-        path.join(__dirname, '..', 'bot'),
-        path.join(process.cwd()),
-        '.'
-    ];
+let mainBotInstance = null;
 
-    for (const p of possiblePaths) {
-        try {
-            const fullPath = path.resolve(p);
-            const indexPath = path.join(fullPath, 'index.js');
-
-            if (fs.existsSync(indexPath)) {
-                console.log(`[Panel] Bot encontrado en: ${fullPath}`);
-                return fullPath;
-            }
-        } catch (error) {
-            continue;
-        }
-    }
-
-    const fallbackPath = path.join(desktop, 'Desktop', 'bot-xpe-nett-completo');
-    if (!fs.existsSync(path.join(fallbackPath, 'index.js'))) {
-        fs.mkdirSync(fallbackPath, { recursive: true });
-    }
-
-    console.log(`[Panel] Usando ruta por defecto: ${fallbackPath}`);
-    return fallbackPath;
-}
-
-// ==========================================
-// CONTROL DEL BOT
-// ==========================================
-
-/**
- * Inicia el proceso del bot
- */
-async function startBot() {
-    if (botProcess) {
-        return { success: false, message: 'El bot ya está ejecutándose' };
-    }
-
+async function initializeMainBot() {
     try {
-        botPath = findBotPath();
+        mainBotInstance = await createBotInstance('main', (data) => {
+            // Enviar logs al panel
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('bot-log', data);
+                mainWindow.webContents.send('bot-message', data);
+            }
+        });
 
-        if (!fs.existsSync(path.join(botPath, 'index.js'))) {
-            return {
-                success: false,
-                message: 'No se encontró index.js en la carpeta del bot',
-                hint: 'Verifica la ubicación del bot o reinstala'
-            };
+        console.log('[Panel] Bot principal inicializado');
+        return { success: true };
+    } catch (error) {
+        console.error('[Panel] Error inicializando bot:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+function getAllBotInstances() {
+    const instances = [];
+
+    if (mainBotInstance) {
+        instances.push({
+            id: 'main',
+            name: 'Bot Principal',
+            status: mainBotInstance.status || 'desconectado',
+            phone: mainBotInstance.phone || 'No conectado',
+            sessions: 1
+        });
+    }
+
+    Object.keys(botInstances).forEach(botId => {
+        if (botId !== 'main' && botInstances[botId]) {
+            instances.push({
+                id: botId,
+                name: `Sub-bot ${botId}`,
+                status: botInstances[botId].status || 'desconectado',
+                phone: botInstances[botId].phone || 'No conectado',
+                sessions: 1
+            });
         }
+    });
 
-        // Usar node directamente para mejor control
-        botProcess = childProcess.spawn('node', ['index.js'], {
-            cwd: botPath,
-            env: { ...process.env, NODE_ENV: 'production' },
-            stdio: ['ignore', 'pipe', 'pipe'],
-            detached: false
-        });
-
-        let logBuffer = '';
-
-        botProcess.stdout.on('data', (data) => {
-            const logText = data.toString();
-            logBuffer += logText;
-
-            // Limitar buffer
-            if (logBuffer.length > 10000) {
-                logBuffer = logBuffer.substring(logBuffer.length - 5000);
-            }
-
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('bot-log', logText);
-                mainWindow.webContents.send('bot-status', 'ejecutando');
-            }
-        });
-
-        botProcess.stderr.on('data', (data) => {
-            const errorText = `[ERROR] ${data.toString()}`;
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('bot-log', errorText);
-            }
-        });
-
-        botProcess.on('error', (error) => {
-            const errorText = `[FATAL] Error al iniciar bot: ${error.message}`;
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('bot-log', errorText);
-                mainWindow.webContents.send('bot-status', 'error');
-            }
-            botProcess = null;
-        });
-
-        botProcess.on('close', (code) => {
-            const closeText = `[Bot cerrado con código: ${code}]`;
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('bot-log', closeText);
-                mainWindow.webContents.send('bot-status', 'detenido');
-            }
-            botProcess = null;
-        });
-
-        console.log(`[Panel] Bot iniciado desde: ${botPath}`);
-        return {
-            success: true,
-            message: 'Bot iniciado correctamente',
-            path: botPath
-        };
-
-    } catch (error) {
-        console.error('[Panel] Error iniciando bot:', error);
-        return { success: false, message: error.message };
-    }
-}
-
-/**
- * Detiene el proceso del bot
- */
-function stopBot() {
-    if (!botProcess) {
-        return { success: false, message: 'El bot no está ejecutándose' };
-    }
-
-    try {
-        // Intentar apagado graceful primero
-        botProcess.kill('SIGTERM');
-
-        // Forzar cierre después de 5 segundos
-        setTimeout(() => {
-            if (botProcess && !botProcess.killed) {
-                botProcess.kill('SIGKILL');
-            }
-        }, 5000);
-
-        botProcess = null;
-        return { success: true, message: 'Bot detenido correctamente' };
-    } catch (error) {
-        botProcess = null;
-        return { success: false, message: error.message };
-    }
-}
-
-/**
- * Reinicia el bot
- */
-async function restartBot() {
-    stopBot();
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    return startBot();
+    return instances;
 }
 
 // ==========================================
@@ -370,10 +278,10 @@ async function restartBot() {
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1100,
-        height: 750,
-        minWidth: 900,
-        minHeight: 650,
+        width: 1400,
+        height: 900,
+        minWidth: 1200,
+        minHeight: 700,
         frame: false,
         transparent: false,
         backgroundColor: '#0a0a0f',
@@ -381,97 +289,80 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, 'preload.js'),
-            webSecurity: true,
-            allowRunningInsecureContent: false
+            preload: path.join(__dirname, 'src', 'preload.js'),
+            webSecurity: true
         },
-        icon: path.join(__dirname, '..', 'assets', 'icon.svg')
+        icon: path.join(__dirname, 'assets', 'icon.svg')
     });
 
-    // Cargar HTML
     mainWindow.loadFile('index.html');
 
-    // Ocultar DevTools en producción
     mainWindow.webContents.on('devtools-opened', () => {
         mainWindow.webContents.closeDevTools();
     });
 
-    // Mostrar ventana cuando esté lista
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
     });
 
-    // Manejar cierre
     mainWindow.on('closed', () => {
-        if (botProcess) {
-            stopBot();
-        }
+        // Cerrar todos los bots
+        Object.keys(botInstances).forEach(botId => {
+            if (botInstances[botId] && botInstances[botId].socket) {
+                botInstances[botId].socket.close();
+            }
+        });
         mainWindow = null;
     });
 
-    // Prevenir navegación externa
-    mainWindow.webContents.on('will-navigate', (event) => {
-        event.preventDefault();
+    mainWindow.on('maximize', () => {
+        mainWindow.webContents.send('window-state', 'maximized');
+    });
+
+    mainWindow.on('unmaximize', () => {
+        mainWindow.webContents.send('window-state', 'normal');
     });
 }
-
-// ==========================================
-// IPC HANDLERS - SEGURIDAD
-// ==========================================
-
-// Obtener HWID del equipo
-ipcMain.handle('get-hwid', async () => {
-    let hwid = getCachedHWID();
-
-    if (!hwid) {
-        hwid = generateSecureHWID();
-        cacheHWID(hwid);
-    }
-
-    return hwid;
-});
-
-// Generar código de activación para un HWID
-ipcMain.handle('generate-activation', (event, targetHWID) => {
-    if (!isLicenseValidated || licenseData?.type !== 'admin') {
-        return { success: false, error: 'Solo administradores pueden generar activaciones' };
-    }
-
-    const activationCode = generateActivationCode(targetHWID);
-    return { success: true, code: activationCode, hwid: targetHWID };
-});
 
 // ==========================================
 // IPC HANDLERS - LICENCIAS
 // ==========================================
 
-// Verificar y activar licencia
-ipcMain.handle('activate-license', async (event, licenseKey) => {
-    try {
-        const currentHWID = await ipcMain.invoke('get-hwid');
-        const validation = validateLicense(licenseKey, currentHWID);
-
-        if (!validation.valid) {
-            return validation;
-        }
-
-        // Guardar licencia
-        licenseData = saveLicense(licenseKey, currentHWID, validation.type);
-        isLicenseValidated = true;
-
-        return {
-            valid: true,
-            type: validation.type,
-            permissions: validation.permissions,
-            message: validation.message
-        };
-
-    } catch (error) {
-        return { valid: false, error: error.message };
+ipcMain.handle('get-hwid', async () => {
+    let hwid = getCachedHWID();
+    if (!hwid) {
+        hwid = generateSecureHWID();
+        cacheHWID(hwid);
     }
+    return hwid;
 });
 
-// Verificar licencia guardada
+ipcMain.handle('generate-activation', (event, targetHWID) => {
+    if (!isLicenseValidated || !licenseData?.permissions?.includes('license')) {
+        return { success: false, error: 'Solo administradores pueden generar activaciones' };
+    }
+    return { success: true, code: generateActivationCode(targetHWID), hwid: targetHWID };
+});
+
+ipcMain.handle('activate-license', async (event, licenseKey) => {
+    const currentHWID = await ipcMain.invoke('get-hwid');
+    const validation = validateLicense(licenseKey, currentHWID);
+
+    if (!validation.valid) {
+        return validation;
+    }
+
+    licenseData = saveLicense(licenseKey, currentHWID, validation.type, validation.permissions);
+    isLicenseValidated = true;
+
+    return {
+        valid: true,
+        type: validation.type,
+        permissions: validation.permissions,
+        message: validation.message
+    };
+});
+
 ipcMain.handle('check-saved-license', async () => {
     const saved = loadSavedLicense();
     if (!saved) {
@@ -480,13 +371,8 @@ ipcMain.handle('check-saved-license', async () => {
 
     const currentHWID = await ipcMain.invoke('get-hwid');
 
-    // Verificar que el HWID coincida
     if (saved.hwid && saved.hwid !== currentHWID) {
-        return {
-            valid: false,
-            error: 'Licencia no válida para este equipo',
-            hint: 'Contacta a soporte para reactivar'
-        };
+        return { valid: false, error: 'Licencia no válida para este equipo', hint: 'Contacta a soporte' };
     }
 
     isLicenseValidated = true;
@@ -495,87 +381,317 @@ ipcMain.handle('check-saved-license', async () => {
     return {
         valid: true,
         type: saved.type,
-        permissions: ['full', 'bot', 'stats'],
+        permissions: saved.permissions,
         message: 'Licencia cargada correctamente'
     };
 });
 
 // ==========================================
-// IPC HANDLERS - BOT
+// IPC HANDLERS - BOTS
 // ==========================================
 
-// Detectar ruta del bot
-ipcMain.handle('find-bot', () => {
-    botPath = findBotPath();
-    return botPath;
-});
-
-// Iniciar bot
-ipcMain.handle('start-bot', async () => {
-    if (!isLicenseValidated) {
-        return { success: false, error: 'Licencia no validada', hint: 'Activa tu licencia primero' };
-    }
-    return await startBot();
-});
-
-// Detener bot
-ipcMain.handle('stop-bot', async () => {
-    return stopBot();
-});
-
-// Reiniciar bot
-ipcMain.handle('restart-bot', async () => {
+ipcMain.handle('bot-init', async () => {
     if (!isLicenseValidated) {
         return { success: false, error: 'Licencia no validada' };
     }
-    return await restartBot();
+    return await initializeMainBot();
 });
 
-// Obtener estado del bot
-ipcMain.handle('get-status', () => {
-    if (!botProcess) {
-        return 'detenido';
+ipcMain.handle('bot-get-status', () => {
+    if (!mainBotInstance) {
+        return { status: 'no_inicializado', bots: [] };
+    }
+    return {
+        status: mainBotInstance.status,
+        bots: getAllBotInstances()
+    };
+});
+
+ipcMain.handle('bot-send-message', async (event, { to, message, botId = 'main' }) => {
+    if (!isLicenseValidated) {
+        return { success: false, error: 'Licencia no validada' };
     }
 
-    // Verificar si el proceso sigue vivo
     try {
-        process.kill(botProcess.pid, 0);
-        return 'ejecutando';
+        const targetBot = botId === 'main' ? mainBotInstance : botInstances[botId];
+        if (!targetBot || !targetBot.socket) {
+            return { success: false, error: 'Bot no disponible' };
+        }
+
+        await targetBot.socket.sendMessage(to, { text: message });
+        return { success: true, message: 'Mensaje enviado' };
     } catch (error) {
-        botProcess = null;
-        return 'detenido';
+        return { success: false, error: error.message };
     }
 });
+
+ipcMain.handle('bot-create-subbot', async () => {
+    if (!isLicenseValidated) {
+        return { success: false, error: 'Licencia no validada' };
+    }
+
+    try {
+        const subbotId = `subbot_${Date.now()}`;
+        const subbot = await createBotInstance(subbotId, (data) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('bot-log', `[${subbotId}] ${data}`);
+                mainWindow.webContents.send('bot-message', { botId: subbotId, ...data });
+            }
+        });
+
+        return {
+            success: true,
+            botId: subbotId,
+            qr: subbot.qrCode
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('bot-stop-subbot', async (event, botId) => {
+    if (botInstances[botId]) {
+        if (botInstances[botId].socket) {
+            botInstances[botId].socket.close();
+        }
+        delete botInstances[botId];
+        return { success: true };
+    }
+    return { success: false, error: 'Sub-bot no encontrado' };
+});
+
+// ==========================================
+// IPC HANDLERS - ADMINISTRADORES
+// ==========================================
+
+ipcMain.handle('admins-get', () => {
+    return db.admins;
+});
+
+ipcMain.handle('admins-add', (event, { jid, name, role = 'mod' }) => {
+    if (!isLicenseValidated || !licenseData?.permissions?.includes('admins')) {
+        return { success: false, error: 'Sin permisos' };
+    }
+
+    if (db.admins.find(a => a.jid === jid)) {
+        return { success: false, error: 'Administrador ya existe' };
+    }
+
+    const newAdmin = {
+        jid,
+        name,
+        role,
+        addedAt: Date.now(),
+        addedBy: licenseData.licenseKey
+    };
+
+    db.admins.push(newAdmin);
+    saveDatabase();
+
+    return { success: true, admin: newAdmin };
+});
+
+ipcMain.handle('admins-remove', (event, jid) => {
+    if (!isLicenseValidated || !licenseData?.permissions?.includes('admins')) {
+        return { success: false, error: 'Sin permisos' };
+    }
+
+    const index = db.admins.findIndex(a => a.jid === jid);
+    if (index === -1) {
+        return { success: false, error: 'Administrador no encontrado' };
+    }
+
+    db.admins.splice(index, 1);
+    saveDatabase();
+
+    return { success: true };
+});
+
+// ==========================================
+// IPC HANDLERS - VIPs
+// ==========================================
+
+ipcMain.handle('vips-get', () => {
+    return db.vips;
+});
+
+ipcMain.handle('vips-add', (event, { jid, name, days = 30, plan = 'premium' }) => {
+    if (!isLicenseValidated || !licenseData?.permissions?.includes('vips')) {
+        return { success: false, error: 'Sin permisos' };
+    }
+
+    const existingIndex = db.vips.findIndex(v => v.jid === jid);
+    const expirationDate = Date.now() + (days * 24 * 60 * 60 * 1000);
+
+    if (existingIndex !== -1) {
+        // Actualizar existente
+        db.vips[existingIndex].expirationDate = expirationDate;
+        db.vips[existingIndex].plan = plan;
+        db.vips[existingIndex].updatedAt = Date.now();
+    } else {
+        // Nuevo VIP
+        db.vips.push({
+            jid,
+            name,
+            plan,
+            expirationDate,
+            activatedAt: Date.now(),
+            usageCount: 0,
+            status: 'active'
+        });
+    }
+
+    saveDatabase();
+    return { success: true };
+});
+
+ipcMain.handle('vips-remove', (event, jid) => {
+    if (!isLicenseValidated || !licenseData?.permissions?.includes('vips')) {
+        return { success: false, error: 'Sin permisos' };
+    }
+
+    const index = db.vips.findIndex(v => v.jid === jid);
+    if (index === -1) {
+        return { success: false, error: 'VIP no encontrado' };
+    }
+
+    db.vips.splice(index, 1);
+    saveDatabase();
+
+    return { success: true };
+});
+
+ipcMain.handle('vips-check', (event, jid) => {
+    const vip = db.vips.find(v => v.jid === jid);
+    if (!vip) {
+        return { isVip: false, reason: 'No es VIP' };
+    }
+
+    if (vip.expirationDate < Date.now()) {
+        return { isVip: false, reason: 'Suscripción vencida', expiredAt: vip.expirationDate };
+    }
+
+    return { isVip: true, plan: vip.plan, expiresAt: vip.expirationDate };
+});
+
+// ==========================================
+// IPC HANDLERS - MENSAJES Y MONITOREO
+// ==========================================
+
+ipcMain.handle('messages-get-recent', () => {
+    return messageHandlers.getRecentMessages ? messageHandlers.getRecentMessages(50) : [];
+});
+
+ipcMain.handle('messages-clear', () => {
+    if (messageHandlers.clearMessages) {
+        messageHandlers.clearMessages();
+        return { success: true };
+    }
+    return { success: false };
+});
+
+ipcMain.handle('messages-filter', (event, criteria) => {
+    // criteria: { type: 'text|image|audio', from: string, botId: string }
+    return messageHandlers.filterMessages ? messageHandlers.filterMessages(criteria) : [];
+});
+
+// ==========================================
+// IPC HANDLERS - ESTADÍSTICAS
+// ==========================================
+
+ipcMain.handle('stats-get', () => {
+    const today = new Date().toISOString().split('T')[0];
+
+    return {
+        totalMessages: db.stats.messages,
+        totalCommands: db.stats.commands,
+        totalUsers: db.stats.users.size,
+        dailyStats: db.stats.dailyStats[today] || { messages: 0, commands: 0 },
+        uptime: process.uptime(),
+        botStatus: mainBotInstance ? mainBotInstance.status : 'detenido'
+    };
+});
+
+ipcMain.handle('stats-record-message', (event, data) => {
+    db.stats.messages++;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (!db.stats.dailyStats[today]) {
+        db.stats.dailyStats[today] = { messages: 0, commands: 0 };
+    }
+    db.stats.dailyStats[today].messages++;
+
+    if (data.from) {
+        db.stats.users.add(data.from);
+    }
+
+    saveDatabase();
+});
+
+ipcMain.handle('stats-record-command', (event, command) => {
+    db.stats.commands++;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (!db.stats.dailyStats[today]) {
+        db.stats.dailyStats[today] = { messages: 0, commands: 0 };
+    }
+    db.stats.dailyStats[today].commands++;
+
+    saveDatabase();
+});
+
+// ==========================================
+// IPC HANDLERS - IA
+// ==========================================
+
+ipcMain.handle('ai-suggest-reply', async (event, { message, context = '' }) => {
+    // Integración básica de IA (simulada)
+    // En producción, conectar con OpenAI o servicio local
+    const responses = [
+        `Entiendo tu mensaje sobre "${message.substring(0, 30)}...". ¿Cómo puedo ayudarte mejor?`,
+        `Gracias por escribirnos. Un agente te atenderá pronto.`,
+        `¡Hola! He recibido tu mensaje y estoy procesando tu solicitud.`,
+        `En breve te respondemos. ¿Hay algo más en lo que pueda ayudarte?`
+    ];
+
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    const sentiment = analyzeSentiment(message);
+
+    return {
+        success: true,
+        suggestion: randomResponse,
+        sentiment: sentiment,
+        confidence: 0.85
+    };
+});
+
+function analyzeSentiment(text) {
+    const positive = ['gracias', 'excelente', 'genial', 'perfecto', 'amo', 'feliz'];
+    const negative = ['problema', 'error', 'fallo', 'pesimo', 'odio', 'urgente'];
+
+    const lowerText = text.toLowerCase();
+
+    if (positive.some(w => lowerText.includes(w))) return 'positive';
+    if (negative.some(w => lowerText.includes(w))) return 'negative';
+    return 'neutral';
+}
 
 // ==========================================
 // IPC HANDLERS - UTILIDADES
 // ==========================================
 
-// Abrir carpeta del bot
-ipcMain.handle('open-bot-folder', async () => {
-    const folderPath = findBotPath();
+ipcMain.handle('get-app-version', () => APP_VERSION);
+
+ipcMain.handle('open-external', (event, url) => {
+    shell.openExternal(url);
+});
+
+ipcMain.handle('open-folder', async (event, folderPath) => {
+    if (!folderPath) {
+        folderPath = path.join(app.getPath('userData'), 'data');
+    }
     shell.openPath(folderPath);
     return folderPath;
-});
-
-// Abrir carpeta de logs
-ipcMain.handle('open-logs-folder', async () => {
-    const logsPath = path.join(app.getPath('userData'), 'logs');
-    if (!fs.existsSync(logsPath)) {
-        fs.mkdirSync(logsPath, { recursive: true });
-    }
-    shell.openPath(logsPath);
-    return logsPath;
-});
-
-// Obtener versión de la app
-ipcMain.handle('get-app-version', () => {
-    return APP_VERSION;
-});
-
-// Abrir enlace externo
-ipcMain.handle('open-external', async (event, url) => {
-    shell.openExternal(url);
 });
 
 // ==========================================
@@ -597,9 +713,6 @@ ipcMain.handle('window-maximize', () => {
 });
 
 ipcMain.handle('window-close', () => {
-    if (botProcess) {
-        stopBot();
-    }
     if (mainWindow) {
         mainWindow.close();
     }
@@ -610,8 +723,16 @@ ipcMain.handle('window-close', () => {
 // ==========================================
 
 app.whenReady().then(() => {
-    console.log('[Panel] XPE-BOT Control Panel iniciado');
-    console.log('[Panel] Versión:', APP_VERSION);
+    // Registrar atajos globales
+    globalShortcut.register('CommandOrControl+Shift+K', () => {
+        if (mainWindow) {
+            mainWindow.webContents.toggleDevTools();
+        }
+    });
+
+    ensureDirectories();
+    loadDatabase();
+    console.log('[Panel] XPE-BOT Control Panel v' + APP_VERSION + ' iniciado');
     createWindow();
 });
 
@@ -626,6 +747,9 @@ app.on('activate', () => {
         createWindow();
     }
 });
+
+// Guardar base de datos periódicamente
+setInterval(saveDatabase, 60000);
 
 // Manejar errores no capturados
 process.on('uncaughtException', (error) => {
