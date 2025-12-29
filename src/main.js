@@ -16,6 +16,24 @@ const MAX_LOGS = 100;
 // Archivo de configuración para guardar la ruta del bot
 const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
 
+// Constantes para archivos seguros y sistemas
+const PROTECTED_PATTERNS = [
+  /\.env$/i,
+  /package-lock\.json$/i,
+  /node_modules/i,
+  /\.git/i,
+  /\.DS_Store$/i
+];
+
+const SENSITIVE_PATTERNS = [
+  /api_key/i,
+  /apikey/i,
+  /password/i,
+  /secret/i,
+  /token/i,
+  /auth/i
+];
+
 // Función para cargar la configuración
 function loadConfig() {
   try {
@@ -26,7 +44,7 @@ function loadConfig() {
   } catch (error) {
     console.error('Error loading config:', error);
   }
-  return { botPath: '' };
+  return { botPath: '', openaiKey: '' };
 }
 
 // Función para guardar la configuración
@@ -57,12 +75,97 @@ function addLog(type, message) {
   }
 }
 
+// Función para verificar si un archivo está protegido
+function isProtectedFile(filePath) {
+  return PROTECTED_PATTERNS.some(pattern => pattern.test(filePath));
+}
+
+// Función para verificar si contiene contenido sensible
+function containsSensitiveContent(content) {
+  return SENSITIVE_PATTERNS.some(pattern => pattern.test(content));
+}
+
+// Función para crear respaldo antes de escribir
+function createBackup(filePath, botPath) {
+  try {
+    const backupDir = path.join(__dirname, '..', 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const relativePath = path.relative(botPath, filePath);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `${timestamp}_${relativePath.replace(/[/\\]/g, '_')}.bak`;
+    const backupPath = path.join(backupDir, backupFileName);
+
+    fs.copyFileSync(filePath, backupPath);
+    addLog('info', `Respaldo creado: ${backupFileName}`);
+    return backupPath;
+  } catch (error) {
+    addLog('error', `Error al crear respaldo: ${error.message}`);
+    return null;
+  }
+}
+
+// Función para obtener estructura de archivos recursivamente
+function getFileTree(dir, basePath = '') {
+  const result = {
+    name: path.basename(dir),
+    path: dir,
+    relativePath: basePath,
+    type: 'directory',
+    children: []
+  };
+
+  try {
+    const items = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const item of items) {
+      // Ignorar carpetas y archivos protegidos
+      if (item.name.startsWith('.') || isProtectedFile(item.name)) {
+        continue;
+      }
+
+      const fullPath = path.join(dir, item.name);
+      const relativePath = basePath ? path.join(basePath, item.name) : item.name;
+
+      if (item.isDirectory()) {
+        result.children.push(getFileTree(fullPath, relativePath));
+      } else {
+        // Solo incluir archivos de código fuente
+        const ext = path.extname(item.name).toLowerCase();
+        if (['.js', '.json', '.ts', '.txt', '.md', '.html', '.css'].includes(ext)) {
+          result.children.push({
+            name: item.name,
+            path: fullPath,
+            relativePath: relativePath,
+            type: 'file',
+            extension: ext
+          });
+        }
+      }
+    }
+
+    // Ordenar: carpetas primero, luego archivos alfabéticamente
+    result.children.sort((a, b) => {
+      if (a.type === b.type) {
+        return a.name.localeCompare(b.name);
+      }
+      return a.type === 'directory' ? -1 : 1;
+    });
+  } catch (error) {
+    addLog('error', `Error al leer directorio ${dir}: ${error.message}`);
+  }
+
+  return result;
+}
+
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    width: 1400,
+    height: 900,
+    minWidth: 1100,
+    minHeight: 700,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -81,7 +184,6 @@ function createWindow() {
   });
 
   mainWindow.on('closed', () => {
-    // Cerrar el proceso del bot si está corriendo
     if (botProcess) {
       botProcess.kill();
     }
@@ -110,7 +212,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  // Cerrar el proceso del bot antes de salir
   if (botProcess) {
     botProcess.kill('SIGTERM');
     botProcess = null;
@@ -151,18 +252,293 @@ ipcMain.handle('bot:verify-path', async (event, botPath) => {
   };
 });
 
+// IPC: Obtener árbol de archivos del bot
+ipcMain.handle('bot:list-files', async (event, botPath) => {
+  if (!fs.existsSync(botPath)) {
+    return { success: false, message: 'La ruta del bot no existe', tree: null };
+  }
+
+  try {
+    const tree = getFileTree(botPath);
+    return { success: true, tree };
+  } catch (error) {
+    addLog('error', `Error al listar archivos: ${error.message}`);
+    return { success: false, message: error.message, tree: null };
+  }
+});
+
+// IPC: Leer contenido de un archivo
+ipcMain.handle('bot:read-file', async (event, filePath) => {
+  if (!fs.existsSync(filePath)) {
+    return { success: false, message: 'El archivo no existe', content: null };
+  }
+
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const isProtected = isProtectedFile(filePath);
+    return {
+      success: true,
+      content,
+      fileName: path.basename(filePath),
+      isProtected
+    };
+  } catch (error) {
+    addLog('error', `Error al leer archivo: ${error.message}`);
+    return { success: false, message: error.message, content: null };
+  }
+});
+
+// IPC: Escribir contenido a un archivo
+ipcMain.handle('bot:write-file', async (event, filePath, content, botPath) => {
+  if (!fs.existsSync(filePath)) {
+    return { success: false, message: 'El archivo no existe' };
+  }
+
+  // Verificar si está protegido
+  if (isProtectedFile(filePath)) {
+    return {
+      success: false,
+      message: 'Este archivo está protegido y no puede ser modificado'
+    };
+  }
+
+  // Verificar contenido sensible
+  if (containsSensitiveContent(content)) {
+    addLog('warning', 'Intento de escribir contenido potencialmente sensible');
+  }
+
+  try {
+    // Crear respaldo antes de modificar
+    createBackup(filePath, botPath);
+
+    fs.writeFileSync(filePath, content, 'utf8');
+    addLog('success', `Archivo guardado: ${path.basename(filePath)}`);
+    return { success: true, message: 'Archivo guardado correctamente' };
+  } catch (error) {
+    addLog('error', `Error al guardar archivo: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+});
+
+// IPC: Crear nuevo archivo
+ipcMain.handle('bot:create-file', async (event, botPath, fileName, content) => {
+  const filePath = path.join(botPath, fileName);
+
+  if (fs.existsSync(filePath)) {
+    return { success: false, message: 'El archivo ya existe' };
+  }
+
+  try {
+    fs.writeFileSync(filePath, content || '', 'utf8');
+    addLog('success', `Archivo creado: ${fileName}`);
+    return { success: true, message: 'Archivo creado correctamente', filePath };
+  } catch (error) {
+    addLog('error', `Error al crear archivo: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+});
+
+// IPC: Eliminar archivo
+ipcMain.handle('bot:delete-file', async (event, filePath, botPath) => {
+  if (!fs.existsSync(filePath)) {
+    return { success: false, message: 'El archivo no existe' };
+  }
+
+  if (isProtectedFile(filePath)) {
+    return { success: false, message: 'No se puede eliminar archivos protegidos' };
+  }
+
+  try {
+    // Crear respaldo antes de eliminar
+    createBackup(filePath, botPath);
+    fs.unlinkSync(filePath);
+    addLog('warning', `Archivo eliminado: ${path.basename(filePath)}`);
+    return { success: true, message: 'Archivo eliminado correctamente' };
+  } catch (error) {
+    addLog('error', `Error al eliminar archivo: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+});
+
+// IPC: Obtener respaldos disponibles
+ipcMain.handle('bot:list-backups', async () => {
+  const backupDir = path.join(__dirname, '..', 'backups');
+
+  if (!fs.existsSync(backupDir)) {
+    return { success: true, backups: [] };
+  }
+
+  try {
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.endsWith('.bak'))
+      .map(f => {
+        const fullPath = path.join(backupDir, f);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: f,
+          path: fullPath,
+          size: stats.size,
+          created: stats.birthtime
+        };
+      })
+      .sort((a, b) => new Date(b.created) - new Date(a.created));
+
+    return { success: true, backups: files };
+  } catch (error) {
+    return { success: false, message: error.message, backups: [] };
+  }
+});
+
+// IPC: Restaurar respaldo
+ipcMain.handle('bot:restore-backup', async (event, backupPath, targetPath) => {
+  if (!fs.existsSync(backupPath)) {
+    return { success: false, message: 'El respaldo no existe' };
+  }
+
+  try {
+    const content = fs.readFileSync(backupPath, 'utf8');
+    fs.writeFileSync(targetPath, content, 'utf8');
+    addLog('success', `Respaldo restaurado: ${path.basename(backupPath)}`);
+    return { success: true, message: 'Respaldo restaurado correctamente' };
+  } catch (error) {
+    addLog('error', `Error al restaurar respaldo: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+});
+
+// IPC: Guardar clave de OpenAI
+ipcMain.handle('bot:save-api-key', async (event, apiKey) => {
+  const config = loadConfig();
+  config.openaiKey = apiKey;
+  const success = saveConfig(config);
+
+  if (success) {
+    addLog('success', 'Clave de API de OpenAI guardada');
+    return { success: true, message: 'Clave guardada correctamente' };
+  } else {
+    return { success: false, message: 'Error al guardar la clave' };
+  }
+});
+
+// IPC: Cargar clave de OpenAI
+ipcMain.handle('bot:load-api-key', async () => {
+  const config = loadConfig();
+  return { apiKey: config.openaiKey || '' };
+});
+
+// IPC: Modificar código con IA
+ipcMain.handle('bot:ai-modify', async (event, filePath, currentContent, instruction) => {
+  const config = loadConfig();
+
+  if (!config.openaiKey) {
+    return { success: false, message: 'No hay clave de API de OpenAI configurada' };
+  }
+
+  try {
+    addLog('info', 'IA analizando código...');
+
+    // Determinar tipo de archivo para el sistema prompt
+    const ext = path.extname(filePath).toLowerCase();
+    let languageContext = 'JavaScript';
+
+    if (ext === '.json') languageContext = 'JSON';
+    else if (ext === '.ts') languageContext = 'TypeScript';
+    else if (ext === '.html') languageContext = 'HTML';
+    else if (ext === '.css') languageContext = 'CSS';
+
+    // Intentar detectar qué biblioteca usa el bot
+    let botContext = 'Node.js';
+    if (currentContent.includes('whatsapp-web.js') || currentContent.includes('WWebJS')) {
+      botContext = 'whatsapp-web.js';
+    } else if (currentContent.includes('baileys') || currentContent.includes('Baileys')) {
+      botContext = '@whiskeysockets/baileys';
+    } else if (currentContent.includes('MDD')) {
+      botContext = 'Multi-Device';
+    }
+
+    const systemPrompt = `Eres un desarrollador senior de Node.js especializado en bots de WhatsApp.
+
+Contexto del proyecto:
+- Tipo de bot: ${botContext}
+- Lenguaje principal: ${languageContext}
+
+Reglas importantes:
+1. Devuelve ÚNICAMENTE el código modificado, sin explicaciones previas ni posteriores
+2. Mantén el estilo y formato original del código
+3. Si la instrucción no es clara, haz lo mejor que puedas interpretándola
+4. No agregues comentarios innecesarios
+5. El código debe ser funcional y sintácticamente correcto
+6. Si es un archivo JSON, devuélvelo como JSON válido sin markdown
+
+Input actual del archivo:
+\`\`\`${languageContext}
+${currentContent}
+\`\`\`
+
+Instrucción del usuario: "${instruction}"`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.openaiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: instruction }
+        ],
+        temperature: 0.3,
+        max_tokens: 4000
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Error en la API de OpenAI');
+    }
+
+    const data = await response.json();
+    const modifiedCode = data.choices[0].message.content;
+
+    // Limpiar el código de posible markdown
+    let cleanedCode = modifiedCode.trim();
+    if (cleanedCode.startsWith('```')) {
+      const lines = cleanedCode.split('\n');
+      lines.shift();
+      if (lines[0]?.startsWith(languageContext.toLowerCase())) {
+        lines.shift();
+      }
+      if (lines[lines.length - 1] === '```') {
+        lines.pop();
+      }
+      cleanedCode = lines.join('\n');
+    }
+
+    addLog('success', 'IA generó código modificado');
+    return {
+      success: true,
+      modifiedCode: cleanedCode,
+      message: 'Código modificado correctamente'
+    };
+
+  } catch (error) {
+    addLog('error', `Error con IA: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+});
+
 // IPC: Iniciar bot externo
 ipcMain.handle('bot:start-external', async (event, botPath) => {
   if (botProcess) {
     return { success: false, message: 'El bot ya está ejecutándose' };
   }
 
-  // Verificar que la ruta existe
   if (!fs.existsSync(botPath)) {
     return { success: false, message: 'La ruta del bot no existe' };
   }
 
-  // Verificar package.json
   const packagePath = path.join(botPath, 'package.json');
   if (!fs.existsSync(packagePath)) {
     return { success: false, message: 'No se encontró package.json en la ruta especificada' };
@@ -172,14 +548,12 @@ ipcMain.handle('bot:start-external', async (event, botPath) => {
     addLog('info', 'Iniciando bot externo...');
     addLog('info', `Ruta: ${botPath}`);
 
-    // Crear el proceso hijo
     botProcess = spawn('node', ['index.js'], {
       cwd: botPath,
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
-    // Manejar stdout
     botProcess.stdout.on('data', (data) => {
       const message = data.toString().trim();
       if (message) {
@@ -187,7 +561,6 @@ ipcMain.handle('bot:start-external', async (event, botPath) => {
       }
     });
 
-    // Manejar stderr
     botProcess.stderr.on('data', (data) => {
       const message = data.toString().trim();
       if (message) {
@@ -195,7 +568,6 @@ ipcMain.handle('bot:start-external', async (event, botPath) => {
       }
     });
 
-    // Manejar cierre del proceso
     botProcess.on('close', (code) => {
       if (botProcess) {
         addLog('warning', `El proceso del bot se cerró con código: ${code}`);
@@ -207,7 +579,6 @@ ipcMain.handle('bot:start-external', async (event, botPath) => {
       }
     });
 
-    // Manejar errores del proceso
     botProcess.on('error', (error) => {
       addLog('error', `Error al ejecutar el bot: ${error.message}`);
       botProcess = null;
@@ -235,10 +606,8 @@ ipcMain.handle('bot:stop-external', async () => {
   try {
     addLog('warning', 'Deteniendo bot...');
 
-    // Enviar señal de terminación graceful
     botProcess.kill('SIGTERM');
 
-    // Dar tiempo para que termine gracefully
     const timeout = setTimeout(() => {
       if (botProcess) {
         addLog('error', 'Forzando cierre del bot...');
@@ -246,7 +615,6 @@ ipcMain.handle('bot:stop-external', async () => {
       }
     }, 5000);
 
-    // El proceso se cerrará en el evento 'close'
     return { success: true, message: 'Señal de detención enviada' };
 
   } catch (error) {
@@ -257,17 +625,14 @@ ipcMain.handle('bot:stop-external', async () => {
 
 // IPC: Reiniciar bot externo
 ipcMain.handle('bot:restart-external', async (event, botPath) => {
-  // Primero detener si está corriendo
   if (botProcess) {
     await ipcMain.handle('bot:stop-external', async () => {
       return { success: true };
     });
   }
 
-  // Pequeña pausa antes de reiniciar
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // Iniciar nuevamente
   return await ipcMain.handle('bot:start-external', async () => {
     return { success: true };
   });
