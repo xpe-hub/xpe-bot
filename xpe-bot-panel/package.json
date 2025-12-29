@@ -4,7 +4,7 @@
   "description": "Panel de control para XPE-BOT con Editor IA",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "set ELECTRON_DISABLE_SANDBOX=1 && electron .",
     "build": "electron-builder --win --x64"
   },
   "author": "XPE-TEAM",
