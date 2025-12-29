@@ -1,9 +1,13 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
-const { machineIdSync } = require('node-machine-id');
-const botEngine = require('./bot-engine');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import { machineIdSync } from 'node-machine-id';
+import { fileURLToPath } from 'url';
+import botEngine from './bot-engine.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow;
 let isLicenseValidated = false;
@@ -46,7 +50,7 @@ function saveDatabase() {
 function generateSecureHWID() {
     try {
         const machineId = machineIdSync(true);
-        const os = require('os');
+        const os = await import('os');
         const combinedString = `${machineId}-${os.hostname()}-${os.totalmem()}`;
         const hwidHash = crypto.createHash('sha256').update(combinedString).digest('hex').toUpperCase();
         return `XPE-${hwidHash.substring(0, 16)}-${hwidHash.substring(16, 24)}`;

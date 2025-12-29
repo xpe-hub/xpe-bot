@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Panel de control para XPE-BOT",
   "main": "src/main.js",
+  "type": "module",
   "scripts": {
     "start": "electron .",
-    "install:all": "npm install && npm install electron@27.0.0 @whiskeysockets/baileys pino",
     "build": "electron-builder --win --x64"
   },
   "author": "XPE-TEAM",

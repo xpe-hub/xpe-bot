@@ -1,7 +1,11 @@
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
-const fs = require('fs');
-const path = require('path');
-const P = require('pino');
+import { default as makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } from '@whiskeysockets/baileys';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pino from 'pino';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class BotEngine {
     constructor() {
@@ -23,7 +27,7 @@ class BotEngine {
         this.sock = makeWASocket({
             version,
             auth: state,
-            logger: P({ level: 'silent' }),
+            logger: pino({ level: 'silent' }),
             printQRInTerminal: false,
             browser: ['XPE-BOT', 'Chrome', '1.0.0']
         });
@@ -92,4 +96,4 @@ class BotEngine {
     }
 }
 
-module.exports = new BotEngine();
+export default new BotEngine();
