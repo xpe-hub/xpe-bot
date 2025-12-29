@@ -4,13 +4,13 @@
   "description": "Panel de control para XPE-BOT con Editor IA",
   "main": "src/main.js",
   "scripts": {
-    "start": "set ELECTRON_DISABLE_SANDBOX=1 && set ELECTRON_DISABLE_GPU=1 && electron . --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage",
+    "start": "set ELECTRON_DISABLE_SANDBOX=1 && electron . --disable-gpu --disable-software-rasterizer",
     "build": "electron-builder --win --x64"
   },
   "author": "XPE-TEAM",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^24.0.0",
+    "electron": "25.8.0",
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
