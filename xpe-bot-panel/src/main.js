@@ -1,14 +1,12 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import { spawn } from 'child_process';
-import os from 'os';
-import crypto from 'crypto';
-import { machineIdSync } from 'node-machine-id';
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
+const os = require('os');
+const crypto = require('crypto');
+const { machineIdSync } = require('node-machine-id');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = process.cwd();
 
 // Configuración global del proceso del bot
 let botProcess = null;
@@ -27,7 +25,7 @@ const APP_VERSION = '1.0.0';
 let db = { admins: [], vips: [], stats: { messages: 0, commands: 0, users: new Set(), dailyStats: {} } };
 
 // Archivo de configuración para guardar la ruta del bot
-const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
+const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 // Constantes para archivos seguros y sistemas
 const PROTECTED_PATTERNS = [
@@ -82,35 +80,8 @@ function generateSecureHWID() {
   return 'XPE-' + hash.substring(0, 16).toUpperCase();
 }
 
-// ========== FUNCIONES DE LICENCIA ==========
-
-function validateLicense(key) {
-  const cleanKey = key.trim().toUpperCase();
-  const licenses = {
-    'XPE-ADMIN-MASTER-2025': { type: 'ADMIN', permissions: ['*'], days: -1 },
-    'XPE-SELLER-PRO-2025': { type: 'SELLER', permissions: ['bot', 'panel'], days: 30 }
-  };
-
-  if (licenses[cleanKey]) {
-    const lic = licenses[cleanKey];
-    return { valid: true, type: lic.type, permissions: lic.permissions, message: `Licencia ${lic.type} activada` };
-  }
-
-  const licenseFile = path.join(LICENSE_DIR, `${cleanKey}.json`);
-  if (fs.existsSync(licenseFile)) {
-    const savedLic = JSON.parse(fs.readFileSync(licenseFile, 'utf8'));
-    if (new Date() > new Date(savedLic.expires)) {
-      return { valid: false, error: 'Licencia vencida' };
-    }
-    return { valid: true, type: savedLic.type, permissions: savedLic.permissions, message: `Licencia ${savedLic.type} activada` };
-  }
-
-  return { valid: false, error: 'Licencia inválida' };
-}
-
 // ========== FUNCIONES DEL BOT ==========
 
-// Función para cargar la configuración
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
@@ -123,7 +94,6 @@ function loadConfig() {
   return { botPath: '', openaiKey: '' };
 }
 
-// Función para guardar la configuración
 function saveConfig(config) {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
@@ -134,7 +104,6 @@ function saveConfig(config) {
   }
 }
 
-// Función para añadir logs
 function addLog(type, message) {
   const timestamp = new Date().toLocaleString('es-ES');
   const logEntry = { type, message, timestamp };
@@ -149,20 +118,17 @@ function addLog(type, message) {
   }
 }
 
-// Función para verificar si un archivo está protegido
 function isProtectedFile(filePath) {
   return PROTECTED_PATTERNS.some(pattern => pattern.test(filePath));
 }
 
-// Función para verificar si contiene contenido sensible
 function containsSensitiveContent(content) {
   return SENSITIVE_PATTERNS.some(pattern => pattern.test(content));
 }
 
-// Función para crear respaldo antes de escribir
 function createBackup(filePath, botPath) {
   try {
-    const backupDir = path.join(__dirname, '..', 'backups');
+    const backupDir = path.join(__dirname, 'backups');
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
@@ -181,7 +147,6 @@ function createBackup(filePath, botPath) {
   }
 }
 
-// Función para obtener estructura de archivos recursivamente
 function getFileTree(dir, basePath = '') {
   const result = {
     name: path.basename(dir),
@@ -242,14 +207,14 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'src', 'preload.js')
     },
-    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+    icon: path.join(__dirname, 'assets', 'icon.png'),
     backgroundColor: '#1a1a2e',
     show: false
   });
 
-  mainWindow.loadFile(path.join(__dirname, '..', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -300,7 +265,30 @@ ipcMain.handle('get-hwid', () => {
 });
 
 ipcMain.handle('activate-license', (event, key) => {
-  const result = validateLicense(key);
+  const cleanKey = key.trim().toUpperCase();
+  const licenses = {
+    'XPE-ADMIN-MASTER-2025': { type: 'ADMIN', permissions: ['*'], days: -1 },
+    'XPE-SELLER-PRO-2025': { type: 'SELLER', permissions: ['bot', 'panel'], days: 30 }
+  };
+
+  let result;
+  if (licenses[cleanKey]) {
+    const lic = licenses[cleanKey];
+    result = { valid: true, type: lic.type, permissions: lic.permissions, message: `Licencia ${lic.type} activada` };
+  } else {
+    const licenseFile = path.join(LICENSE_DIR, `${cleanKey}.json`);
+    if (fs.existsSync(licenseFile)) {
+      const savedLic = JSON.parse(fs.readFileSync(licenseFile, 'utf8'));
+      if (new Date() > new Date(savedLic.expires)) {
+        result = { valid: false, error: 'Licencia vencida' };
+      } else {
+        result = { valid: true, type: savedLic.type, permissions: savedLic.permissions, message: `Licencia ${savedLic.type} activada` };
+      }
+    } else {
+      result = { valid: false, error: 'Licencia inválida' };
+    }
+  }
+
   if (result.valid) {
     isLicenseValidated = true;
     licenseData = result;
@@ -628,7 +616,7 @@ ipcMain.handle('bot:delete-file', async (event, filePath, botPath) => {
 // ========== IPC HANDLERS - RESPALDOS ==========
 
 ipcMain.handle('bot:list-backups', async () => {
-  const backupDir = path.join(__dirname, '..', 'backups');
+  const backupDir = path.join(__dirname, 'backups');
 
   if (!fs.existsSync(backupDir)) {
     return { success: true, backups: [] };
@@ -841,5 +829,3 @@ ipcMain.on('bot-status', (event, data) => {
     mainWindow.webContents.send('bot-status', data);
   }
 });
-
-export { loadConfig, saveConfig, addLog };

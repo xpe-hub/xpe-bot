@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "description": "Panel de control para XPE-BOT con Editor IA",
   "main": "src/main.js",
-  "type": "module",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win --x64"
