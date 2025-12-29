@@ -5,7 +5,8 @@ let appState = {
     licenseType: null,
     permissions: [],
     hwid: null,
-    stats: { totalMessages: 0, totalCommands: 0, totalUsers: 0 }
+    stats: { totalMessages: 0, totalCommands: 0, totalUsers: 0 },
+    botPath: ''
 };
 
 // Elementos
@@ -34,6 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Verificar licencia guardada
     await checkSavedLicense();
+
+    // Cargar ruta guardada del bot
+    await loadSavedBotPath();
 
     // Obtener versión
     const version = await window.electronAPI.getAppVersion();
@@ -123,218 +127,133 @@ function navigateTo(viewName) {
 
     appState.currentView = viewName;
 
-    // Cargar datos según vista
     if (viewName === 'dashboard') loadDashboardData();
-    if (viewName === 'admins') loadAdmins();
-    if (viewName === 'vips') loadVips();
 }
 
-// Administradores
-async function loadAdmins() {
+// ========== CONFIGURACIÓN DEL BOT EXTERNO ==========
+
+async function loadSavedBotPath() {
     try {
-        const admins = await window.electronAPI.adminsGet();
-        const container = document.getElementById('adminsList');
-        if (!container) return;
-
-        if (admins.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>No hay administradores</p><button class="btn btn-primary mt-2" onclick="showAddAdminModal()">Agregar</button></div>';
-            return;
-        }
-
-        container.innerHTML = admins.map(admin => `
-            <div class="admin-card">
-                <div class="admin-info">
-                    <span class="admin-name">${admin.name}</span>
-                    <span class="admin-jid">${admin.jid}</span>
-                    <span class="badge badge-${admin.role}">${admin.role}</span>
-                </div>
-                <button class="btn btn-sm btn-danger" onclick="removeAdmin('${admin.jid}')">Eliminar</button>
-            </div>
-        `).join('');
-    } catch (error) { console.error('[Panel] Error admins:', error); }
-}
-
-async function showAddAdminModal() {
-    const jid = prompt('JID del administrador:');
-    if (!jid) return;
-    const name = prompt('Nombre:');
-    if (!name) return;
-
-    const result = await window.electronAPI.adminsAdd({ jid, name, role: 'mod' });
-    if (result.success) {
-        showNotification('Admin agregado', 'success');
-        loadAdmins();
-    } else {
-        showNotification(result.error || 'Error', 'error');
-    }
-}
-
-async function removeAdmin(jid) {
-    if (!confirm('¿Eliminar admin?')) return;
-    const result = await window.electronAPI.adminsRemove(jid);
-    if (result.success) {
-        showNotification('Admin eliminado', 'success');
-        loadAdmins();
-    }
-}
-
-// VIPs
-async function loadVips() {
-    try {
-        const vips = await window.electronAPI.vipsGet();
-        const container = document.getElementById('vipsList');
-        if (!container) return;
-
-        if (vips.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>No hay VIPs</p><button class="btn btn-primary mt-2" onclick="showAddVipModal()">Agregar</button></div>';
-            return;
-        }
-
-        container.innerHTML = vips.map(vip => `
-            <div class="vip-card">
-                <div class="vip-info">
-                    <span class="vip-name">${vip.name}</span>
-                    <span class="vip-jid">${vip.jid}</span>
-                    <div class="vip-details">
-                        <span class="badge badge-${vip.plan}">${vip.plan}</span>
-                        <span>Expira: ${new Date(vip.expirationDate).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                <button class="btn btn-sm btn-danger" onclick="removeVip('${vip.jid}')">Eliminar</button>
-            </div>
-        `).join('');
-    } catch (error) { console.error('[Panel] Error vips:', error); }
-}
-
-async function showAddVipModal() {
-    const jid = prompt('JID del VIP:');
-    if (!jid) return;
-    const name = prompt('Nombre:');
-    if (!name) return;
-    const days = parseInt(prompt('Días:', '30') || '30');
-
-    const result = await window.electronAPI.vipsAdd({ jid, name, days, plan: 'premium' });
-    if (result.success) {
-        showNotification('VIP agregado', 'success');
-        loadVips();
-    } else {
-        showNotification(result.error || 'Error', 'error');
-    }
-}
-
-async function removeVip(jid) {
-    if (!confirm('¿Eliminar VIP?')) return;
-    const result = await window.electronAPI.vipsRemove(jid);
-    if (result.success) {
-        showNotification('VIP eliminado', 'success');
-        loadVips();
-    }
-}
-
-// IA
-async function generateAISuggestion() {
-    try {
-        showNotification('IA analizando...', 'info');
-        const result = await window.electronAPI.aiSuggestReply({ message: 'Hola' });
-        if (result.success) {
-            const container = document.getElementById('aiSuggestion');
-            if (container) {
-                container.innerHTML = `
-                    <div class="ai-result">
-                        <p>${result.suggestion}</p>
-                        <div class="ai-actions">
-                            <button class="btn btn-sm btn-primary" onclick="applyAISuggestion()">Usar</button>
-                            <button class="btn btn-sm btn-secondary" onclick="dismissAISuggestion()">Cerrar</button>
-                        </div>
-                    </div>
-                `;
-                container.style.display = 'block';
-            }
+        const result = await window.electronAPI.getBotPath();
+        if (result.path) {
+            appState.botPath = result.path;
+            document.getElementById('botPath').value = result.path;
+            document.getElementById('botsViewPath').value = result.path;
         }
     } catch (error) {
-        showNotification('Error IA', 'error');
+        console.error('[Panel] Error cargando ruta:', error);
     }
 }
 
-function dismissAISuggestion() {
-    const container = document.getElementById('aiSuggestion');
-    if (container) container.style.display = 'none';
-}
-
-function applyAISuggestion() {
-    // Por implementar
-    dismissAISuggestion();
-}
-
-// Notificaciones
-function showNotification(message, type = 'info') {
-    if (!elements.notification) return;
-    elements.notification.textContent = message;
-    elements.notification.className = `notification ${type} show`;
-    setTimeout(() => elements.notification.classList.remove('show'), 4000);
-}
-
-// Window controls
-function minimizeWindow() { window.electronAPI.minimize(); }
-function maximizeWindow() { window.electronAPI.maximize(); }
-function closeWindow() { window.electronAPI.close(); }
-
-// ========== BOT CONTROLS ==========
-async function initBot() {
+async function selectBotFolder() {
     try {
-        showNotification('Inicializando bot...', 'info');
-        const result = await window.electronAPI.initBot();
+        const result = await window.electronAPI.selectBotFolder();
+        if (result.path) {
+            document.getElementById('botPath').value = result.path;
+            document.getElementById('botsViewPath').value = result.path;
+        }
+    } catch (error) {
+        console.error('[Panel] Error seleccionando carpeta:', error);
+    }
+}
+
+async function selectBotFolderFromView() {
+    await selectBotFolder();
+}
+
+async function saveBotPath() {
+    const path = document.getElementById('botPath')?.value.trim();
+    if (!path) {
+        showNotification('Ingresa la ruta del bot', 'warning');
+        return;
+    }
+    
+    try {
+        const result = await window.electronAPI.saveBotPath(path);
         if (result.success) {
-            showNotification('Bot inicializado - Espera el QR', 'success');
+            appState.botPath = path;
+            showNotification('Ruta guardada correctamente', 'success');
         } else {
-            showNotification(result.error || 'Error', 'error');
+            showNotification('Error guardando ruta', 'error');
         }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
 }
 
-async function startBot(botId) {
+async function saveBotPathFromView() {
+    const path = document.getElementById('botsViewPath')?.value.trim();
+    if (!path) {
+        showNotification('Ingresa la ruta del bot', 'warning');
+        return;
+    }
+    
     try {
-        showNotification('Iniciando conexión...', 'info');
-        const result = await window.electronAPI.startBot();
+        const result = await window.electronAPI.saveBotPath(path);
         if (result.success) {
-            showNotification(result.message, 'success');
+            appState.botPath = path;
+            document.getElementById('botPath').value = path;
+            showNotification('Ruta guardada correctamente', 'success');
         } else {
-            showNotification(result.error || 'Error', 'error');
+            showNotification('Error guardando ruta', 'error');
         }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
 }
 
-async function stopBot(botId) {
+async function startExternalBot() {
+    const botPath = appState.botPath || document.getElementById('botPath')?.value.trim();
+    
+    if (!botPath) {
+        showNotification('Primero configura la ruta del bot', 'warning');
+        navigateTo('bots');
+        return;
+    }
+    
     try {
-        const result = await window.electronAPI.stopBot();
-        showNotification('Bot detenido', 'warning');
-        updateStatusIndicator('stopped');
+        showNotification('Iniciando bot...', 'info');
+        const result = await window.electronAPI.startExternalBot(botPath);
+        
+        if (result.success) {
+            showNotification('Bot iniciado correctamente', 'success');
+            updateStatusIndicator('running');
+            addLogToBox(`Bot iniciado desde: ${botPath}`, 'success');
+        } else {
+            showNotification(result.error || 'Error iniciando bot', 'error');
+            addLogToBox(`Error: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+        addLogToBox(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function stopExternalBot() {
+    try {
+        const result = await window.electronAPI.stopExternalBot();
+        if (result.success) {
+            showNotification('Bot detenido', 'warning');
+            updateStatusIndicator('stopped');
+            addLogToBox('Bot detenido', 'warning');
+        } else {
+            showNotification('Error deteniendo bot', 'error');
+        }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
 }
 
-async function restartBot(botId) {
-    try {
-        const result = await window.electronAPI.restartBot();
-        showNotification('Reiniciando bot...', 'info');
-    } catch (error) {
-        showNotification('Error: ' + error.message, 'error');
+function addLogToBox(message, type = 'info') {
+    const logsBox = document.getElementById('logsBox');
+    if (logsBox) {
+        const timestamp = new Date().toLocaleTimeString('es-ES');
+        const logHtml = `<div class="log-line ${type}"><span class="log-time">[${timestamp}]</span>${message}</div>`;
+        logsBox.insertAdjacentHTML('afterbegin', logHtml);
     }
 }
 
-async function createSubBot() {
-    try {
-        const result = await window.electronAPI.createSubbot();
-        showNotification('QR generado para sub-bot', 'success');
-    } catch (error) {
-        showNotification('Error: ' + error.message, 'error');
-    }
-}
+// ========== ENVÍO DE MENSAJES ==========
 
 async function sendQuickMessage() {
     const jid = document.getElementById('quickJid')?.value;
@@ -362,64 +281,47 @@ function updateStatusIndicator(status) {
     const indicator = document.getElementById('statusIndicator');
     if (indicator) {
         indicator.className = 'status-indicator';
-        if (status === 'connected') indicator.classList.add('running');
+        if (status === 'running' || status === 'connected') indicator.classList.add('running');
         else if (status === 'connecting') indicator.classList.add('connecting');
         else indicator.classList.remove('running', 'connecting');
     }
 }
 
+// Notificaciones
+function showNotification(message, type = 'info') {
+    if (!elements.notification) return;
+    elements.notification.textContent = message;
+    elements.notification.className = `notification ${type} show`;
+    setTimeout(() => elements.notification.classList.remove('show'), 4000);
+}
+
+// Window controls
+function minimizeWindow() { window.electronAPI.minimize(); }
+function maximizeWindow() { window.electronAPI.maximize(); }
+function closeWindow() { window.electronAPI.close(); }
+
 // Escuchar eventos del bot
-window.electronAPI.onBotQR((qr) => {
-    showNotification('Código QR recibido - Escanea con WhatsApp', 'info');
+window.electronAPI.onBotLog((data) => {
+    addLogToBox(data.message, data.type || 'info');
 });
 
 window.electronAPI.onBotStatus((data) => {
     updateStatusIndicator(data.status);
-});
-
-window.electronAPI.onBotMessage((data) => {
-    const container = document.getElementById('messagesContainer');
-    if (container) {
-        const msgHtml = `
-            <div class="message-item">
-                <div class="message-header">
-                    <span class="message-sender">${data.jid}</span>
-                    <span class="message-time">${data.time}</span>
-                </div>
-                <div class="message-content">${data.text}</div>
-            </div>
-        `;
-        container.insertafterbegin', msgHtml);
-    }
-});
-
-window.electronAdjacentHTML('API.onLogUpdate((data) => {
-    const logsBox = document.getElementById('logsBox');
-    if (logsBox && data.logs) {
-        logsBox.innerHTML = data.logs.map(log => 
-            `<div class="log-line ${log.type}"><span class="log-time">[${log.time}]</span>${log.message}</div>`
-        ).join('');
-    }
+    showNotification(data.message, data.status === 'connected' ? 'success' : 'info');
 });
 
 // Funciones globales
 window.navigateTo = navigateTo;
-window.showAddAdminModal = showAddAdminModal;
-window.removeAdmin = removeAdmin;
-window.showAddVipModal = showAddVipModal;
-window.removeVip = removeVip;
-window.generateAISuggestion = generateAISuggestion;
-window.applyAISuggestion = applyAISuggestion;
-window.dismissAISuggestion = dismissAISuggestion;
+window.selectBotFolder = selectBotFolder;
+window.selectBotFolderFromView = selectBotFolderFromView;
+window.saveBotPath = saveBotPath;
+window.saveBotPathFromView = saveBotPathFromView;
+window.startExternalBot = startExternalBot;
+window.stopExternalBot = stopExternalBot;
+window.sendQuickMessage = sendQuickMessage;
 window.minimizeWindow = minimizeWindow;
 window.maximizeWindow = maximizeWindow;
 window.closeWindow = closeWindow;
-window.initBot = initBot;
-window.startBot = startBot;
-window.stopBot = stopBot;
-window.restartBot = restartBot;
-window.createSubBot = createSubBot;
-window.sendQuickMessage = sendQuickMessage;
 window.refreshCurrentView = () => { loadDashboardData(); };
 
 // Prevenir menú contextual

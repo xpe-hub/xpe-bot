@@ -37,7 +37,6 @@
             overflow: hidden;
         }
 
-        /* Fondo */
         .background {
             position: fixed;
             top: 0;
@@ -48,7 +47,6 @@
             z-index: -1;
         }
 
-        /* Pantalla de Login */
         .login-screen {
             position: fixed;
             top: 0;
@@ -194,7 +192,6 @@
             font-size: 11px;
         }
 
-        /* Ventana Principal */
         .window {
             width: 100vw;
             height: 100vh;
@@ -212,7 +209,6 @@
             display: flex;
         }
 
-        /* Title Bar */
         .titlebar {
             height: 36px;
             background: rgba(0, 0, 0, 0.5);
@@ -266,7 +262,6 @@
             background: var(--danger);
         }
 
-        /* Sidebar */
         .sidebar {
             width: 220px;
             background: var(--bg-card);
@@ -331,7 +326,6 @@
             color: var(--primary);
         }
 
-        /* Main Content */
         .main-content {
             flex: 1;
             padding: 25px;
@@ -357,7 +351,6 @@
             font-size: 13px;
         }
 
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -389,7 +382,6 @@
         .stat-card .value.warning { color: var(--warning); }
         .stat-card .value.info { color: var(--info); }
 
-        /* Card */
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -417,7 +409,6 @@
             margin-bottom: 0;
         }
 
-        /* Status Indicator */
         .status-indicator {
             width: 10px;
             height: 10px;
@@ -433,7 +424,6 @@
             background: var(--warning);
         }
 
-        /* Control Buttons */
         .control-buttons {
             display: flex;
             gap: 12px;
@@ -445,7 +435,6 @@
             min-width: 100px;
         }
 
-        /* Logs Box */
         .logs-box {
             background: #0d0d12;
             border-radius: 10px;
@@ -468,7 +457,6 @@
         .log-line.info { color: var(--info); }
         .log-time { color: var(--text-dim); margin-right: 8px; }
 
-        /* Notifications */
         .notification {
             position: fixed;
             top: 50px;
@@ -492,13 +480,15 @@
         .notification.warning { border-left: 4px solid var(--warning); }
         .notification.info { border-left: 4px solid var(--info); }
 
-        /* Utilities */
         .text-muted { color: var(--text-muted); }
         .mt-2 { margin-top: 10px; }
         .mb-2 { margin-bottom: 10px; }
         .hidden { display: none !important; }
 
-        /* Scrollbar */
+        .browse-btn {
+            margin-top: 8px;
+        }
+
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -614,6 +604,23 @@
                     </div>
                 </div>
 
+                <!-- Configuración del Bot -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📁 Ruta del Bot</h2>
+                    </div>
+                    <div class="input-group">
+                        <label>Ubicación de tu bot (donde está el index.js o main.js)</label>
+                        <input type="text" id="botPath" placeholder="C:\Users\marti\OneDrive\Desktop\bot-xpe-nett-completo-v3-WORKING\bot-xpe-nett-completo">
+                    </div>
+                    <button class="btn btn-secondary browse-btn" onclick="selectBotFolder()">
+                        📂 Seleccionar Carpeta
+                    </button>
+                    <button class="btn btn-primary" style="margin-top: 15px;" onclick="saveBotPath()">
+                        💾 Guardar Ruta
+                    </button>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h2>
@@ -622,17 +629,11 @@
                         </h2>
                     </div>
                     <div class="control-buttons">
-                        <button class="btn btn-primary" id="initBotBtn" onclick="initBot()">
-                            Inicializar
+                        <button class="btn btn-primary" id="initBotBtn" onclick="startExternalBot()">
+                            ▶ Iniciar Bot
                         </button>
-                        <button class="btn btn-success" id="startBotBtn" onclick="startBot('main')">
-                            ▶ Iniciar
-                        </button>
-                        <button class="btn btn-danger" id="stopBotBtn" onclick="stopBot('main')">
-                            ■ Detener
-                        </button>
-                        <button class="btn btn-secondary" id="restartBotBtn" onclick="restartBot('main')">
-                            ↻ Reiniciar
+                        <button class="btn btn-danger" id="stopBotBtn" onclick="stopExternalBot()">
+                            ■ Detener Bot
                         </button>
                     </div>
                 </div>
@@ -659,20 +660,20 @@
                 </div>
 
                 <div class="card">
-                    <h2>➕ Nuevo Bot</h2>
+                    <h2>📁 Configuración</h2>
                     <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 13px;">
-                        Genera un nuevo código QR para conectar una sesión adicional.
+                        Selecciona la carpeta donde está tu bot de WhatsApp.
                     </p>
-                    <button class="btn btn-primary" onclick="createSubBot()">
-                        Generar QR
-                    </button>
-                </div>
-
-                <div class="card">
-                    <h2>🤖 Bots Conectados</h2>
-                    <div id="botsList">
-                        <p class="text-muted">No hay bots configurados</p>
+                    <div class="input-group">
+                        <label>Ruta del Bot</label>
+                        <input type="text" id="botsViewPath" placeholder="C:\Users\...\bot-xpe-nett-completo">
                     </div>
+                    <button class="btn btn-secondary" onclick="selectBotFolderFromView()">
+                        📂 Seleccionar
+                    </button>
+                    <button class="btn btn-primary" style="margin-top: 15px;" onclick="saveBotPathFromView()">
+                        💾 Guardar
+                    </button>
                 </div>
             </div>
 
@@ -686,7 +687,7 @@
                 <div class="card">
                     <h2>💬 Mensajes Recibidos</h2>
                     <div id="messagesContainer">
-                        <p class="text-muted">No hay mensajes que mostrar</p>
+                        <p class="text-muted">Los mensajes aparecerán aquí cuando el bot reciba actividad</p>
                     </div>
                 </div>
 
