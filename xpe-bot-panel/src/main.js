@@ -6,7 +6,8 @@ const os = require('os');
 const crypto = require('crypto');
 const { machineIdSync } = require('node-machine-id');
 
-const __dirname = process.cwd();
+// Usar process.cwd() como替代 de __dirname en CommonJS
+const PROJECT_ROOT = process.cwd();
 
 // Configuración global del proceso del bot
 let botProcess = null;
@@ -25,7 +26,7 @@ const APP_VERSION = '1.0.0';
 let db = { admins: [], vips: [], stats: { messages: 0, commands: 0, users: new Set(), dailyStats: {} } };
 
 // Archivo de configuración para guardar la ruta del bot
-const CONFIG_FILE = path.join(__dirname, 'config.json');
+const CONFIG_FILE = path.join(PROJECT_ROOT, 'config.json');
 
 // Constantes para archivos seguros y sistemas
 const PROTECTED_PATTERNS = [
@@ -128,7 +129,7 @@ function containsSensitiveContent(content) {
 
 function createBackup(filePath, botPath) {
   try {
-    const backupDir = path.join(__dirname, 'backups');
+    const backupDir = path.join(PROJECT_ROOT, 'backups');
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
@@ -616,7 +617,7 @@ ipcMain.handle('bot:delete-file', async (event, filePath, botPath) => {
 // ========== IPC HANDLERS - RESPALDOS ==========
 
 ipcMain.handle('bot:list-backups', async () => {
-  const backupDir = path.join(__dirname, 'backups');
+  const backupDir = path.join(PROJECT_ROOT, 'backups');
 
   if (!fs.existsSync(backupDir)) {
     return { success: true, backups: [] };
