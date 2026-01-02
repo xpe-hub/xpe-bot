@@ -25,9 +25,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./xpe-bot-panel
-        run: |
-          npm ci
-          npm install electron-builder-portable
+        run: npm ci
 
       - name: Build Electron application
         working-directory: ./xpe-bot-panel

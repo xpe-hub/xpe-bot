@@ -24,18 +24,14 @@
       "output": "dist"
     },
     "win": {
-      "target": ["portable"],
+      "target": ["nsis"],
       "icon": "assets/k-vrc-avatar.png",
       "sign": false
     },
-    "portable": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "sfxPath": "node_modules/electron-builder-portable/7z.sfx"
-    },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "XPE-BOT-Panel-Setup.exe"
     },
     "files": [
       "**/*",
@@ -44,7 +40,7 @@
       "!backups/*",
       "!.git/*"
     ],
-    "asar": false,
+    "asar": true,
     "extraResources": []
   }
 }
