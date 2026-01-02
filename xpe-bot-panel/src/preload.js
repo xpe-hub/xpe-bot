@@ -58,6 +58,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Sistema
     systemInfo: () => ipcRenderer.invoke('system:info'),
 
+    // Actualizaciones
+    checkForUpdates: () => ipcRenderer.invoke('update:check'),
+    downloadUpdate: () => ipcRenderer.invoke('update:download'),
+    applyUpdate: () => ipcRenderer.invoke('update:apply'),
+    getUpdateConfig: () => ipcRenderer.invoke('update:get-config'),
+    saveUpdateConfig: (config) => ipcRenderer.invoke('update:save-config', config),
+
+    // Notificaciones
+    sendNotification: (data) => ipcRenderer.invoke('notification:send', data),
+    getNotificationHistory: () => ipcRenderer.invoke('notification:get-history'),
+    markNotificationRead: (notificationId) => ipcRenderer.invoke('notification:mark-read', notificationId),
+    getOwners: () => ipcRenderer.invoke('notification:get-owners'),
+
     // Window
     minimize: () => ipcRenderer.invoke('window-minimize'),
     maximize: () => ipcRenderer.invoke('window-maximize'),
@@ -87,5 +100,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onLogUpdate: (callback) => {
         ipcRenderer.removeAllListeners('log-update');
         ipcRenderer.on('log-update', (event, data) => callback(data));
+    },
+    onNotificationReceived: (callback) => {
+        ipcRenderer.removeAllListeners('notification:received');
+        ipcRenderer.on('notification:received', (event, data) => callback(data));
     }
 });

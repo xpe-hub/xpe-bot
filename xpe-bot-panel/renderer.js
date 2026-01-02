@@ -145,6 +145,126 @@ function formatUptime(seconds) {
     return `${hours}h ${minutes}m`;
 }
 
+// ========== SISTEMA DE ACTUALIZACIONES ==========
+
+async function checkForUpdates() {
+    try {
+        const result = await window.electronAPI.checkForUpdates();
+        
+        if (result.success) {
+            if (result.hasUpdate) {
+                showNotification(`Nueva version disponible: ${result.latestVersion}`, 'info');
+                return { hasUpdate: true, ...result };
+            } else {
+                showNotification('Tu version esta actualizada', 'success');
+                return { hasUpdate: false, ...result };
+            }
+        }
+        return { hasUpdate: false, ...result };
+    } catch (error) {
+        console.error('[Panel] Error checking updates:', error);
+        return { hasUpdate: false, error: error.message };
+    }
+}
+
+async function downloadUpdate() {
+    showNotification('Descargando actualizacion...', 'info');
+    try {
+        const result = await window.electronAPI.downloadUpdate();
+        if (result.success) {
+            showNotification('Actualizacion descargada', 'success');
+            return true;
+        } else {
+            showNotification(result.message || 'Error descargando', 'error');
+            return false;
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+        return false;
+    }
+}
+
+async function applyUpdate() {
+    try {
+        const result = await window.electronAPI.applyUpdate();
+        if (result.success) {
+            showNotification('Actualizacion aplicada. Reiniciando...', 'success');
+            return true;
+        } else {
+            showNotification(result.message || 'Error aplicando', 'error');
+            return false;
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// ========== SISTEMA DE NOTIFICACIONES ==========
+
+async function loadNotifications() {
+    try {
+        const result = await window.electronAPI.getNotificationHistory();
+        if (result.success && result.notifications) {
+            renderNotifications(result.notifications);
+        }
+    } catch (error) {
+        console.error('[Panel] Error cargando notificaciones:', error);
+    }
+}
+
+function renderNotifications(notifications) {
+    const container = document.getElementById('notificationsList');
+    if (!container) return;
+
+    if (notifications.length === 0) {
+        container.innerHTML = '<p class="empty-message">No hay notificaciones</p>';
+        return;
+    }
+
+    container.innerHTML = notifications.map(notification => `
+        <div class="notification-item ${notification.read ? 'read' : 'unread'}" data-id="${notification.id}">
+            <div class="notification-content">
+                <span class="notification-title">${escapeHtml(notification.title)}</span>
+                <span class="notification-message">${escapeHtml(notification.message)}</span>
+                <span class="notification-time">${new Date(notification.timestamp).toLocaleString('es-ES')}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function markNotificationAsRead(notificationId) {
+    try {
+        await window.electronAPI.markNotificationRead(notificationId);
+        const element = document.querySelector(`[data-id="${notificationId}"]`);
+        if (element) {
+            element.classList.remove('unread');
+            element.classList.add('read');
+        }
+    } catch (error) {
+        console.error('[Panel] Error marking notification:', error);
+    }
+}
+
+async function loadOwners() {
+    try {
+        const result = await window.electronAPI.getOwners();
+        if (result.success && result.owners) {
+            return result.owners;
+        }
+    } catch (error) {
+        console.error('[Panel] Error cargando owners:', error);
+    }
+    return [];
+}
+
+// Escuchar notificaciones en tiempo real
+window.electronAPI.onNotificationReceived((data) => {
+    showNotification(`${data.title}: ${data.message}`, 'info');
+    addLogToBox(`Notificacion recibida: ${data.title}`, 'info');
+    loadNotifications();
+});
+
 // Navegación
 function navigateTo(viewName) {
     document.querySelectorAll('.main-content').forEach(el => el.style.display = 'none');
@@ -945,6 +1065,12 @@ window.clearAIPrompt = clearAIPrompt;
 window.restoreBackup = restoreBackup;
 window.saveApiKey = saveApiKey;
 window.loadBackups = loadBackups;
+window.checkForUpdates = checkForUpdates;
+window.downloadUpdate = downloadUpdate;
+window.applyUpdate = applyUpdate;
+window.loadNotifications = loadNotifications;
+window.markNotificationAsRead = markNotificationAsRead;
+window.loadOwners = loadOwners;
 
 // Prevenir menú contextual
 document.addEventListener('contextmenu', (e) => e.preventDefault());

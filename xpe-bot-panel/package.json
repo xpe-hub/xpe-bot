@@ -1,7 +1,7 @@
 {
   "name": "xpe-bot-panel",
-  "version": "2.0.0",
-  "description": "Panel de control para XPE-BOT con Editor IA",
+  "version": "3.0.0-beta",
+  "description": "Panel de control para XPE-BOT v3 con Sistema de Actualizaciones y Colaboracion Multi-Usuario",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

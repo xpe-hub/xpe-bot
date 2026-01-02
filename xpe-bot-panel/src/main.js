@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const os = require('os');
-const crypto = require('crypto');
 const { machineIdSync } = require('node-machine-id');
 
 // Usar process.cwd() como替代 de __dirname en CommonJS
@@ -19,7 +18,7 @@ let currentUser = null;
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '3.0.0-beta';
 
 let db = { admins: [], vips: [], stats: { messages: 0, commands: 0, users: new Set(), dailyStats: {} } };
 
@@ -70,12 +69,6 @@ function saveDatabase() {
     fs.writeFileSync(path.join(DATA_DIR, 'vips.json'), JSON.stringify(db.vips, null, 2));
     fs.writeFileSync(path.join(DATA_DIR, 'stats.json'), JSON.stringify({ ...db.stats, users: Array.from(db.stats.users) }, null, 2));
   } catch (error) { console.error('Error guardando DB:', error); }
-}
-
-function generateSecureHWID() {
-  const machineId = machineIdSync({ original: true });
-  const hash = crypto.createHash('sha256').update(machineId + 'XPE-SALT-2025').digest('hex');
-  return 'XPE-' + hash.substring(0, 16).toUpperCase();
 }
 
 // ========== FUNCIONES DEL BOT ==========
@@ -897,6 +890,96 @@ ipcMain.handle('log-update', async () => {
   return { logs: botLogs };
 });
 
+// ========== SISTEMA DE ACTUALIZACIONES ==========
+
+ipcMain.handle('update:check', async () => {
+  // Placeholder para checking de actualizaciones
+  // En la version completa, esto consultara un servidor o archivo compartido
+  return {
+    success: true,
+    hasUpdate: false,
+    currentVersion: APP_VERSION,
+    latestVersion: APP_VERSION,
+    downloadUrl: null,
+    releaseNotes: null
+  };
+});
+
+ipcMain.handle('update:download', async () => {
+  // Placeholder para descargar actualizaciones
+  return { success: false, message: 'Sistema de actualizaciones en desarrollo' };
+});
+
+ipcMain.handle('update:apply', async () => {
+  // Placeholder para aplicar actualizaciones
+  return { success: false, message: 'Sistema de actualizaciones en desarrollo' };
+});
+
+ipcMain.handle('update:get-config', async () => {
+  // Obtener configuracion de actualizaciones
+  const updateConfigFile = path.join(DATA_DIR, 'update-config.json');
+  try {
+    if (fs.existsSync(updateConfigFile)) {
+      const config = JSON.parse(fs.readFileSync(updateConfigFile, 'utf8'));
+      return { success: true, config };
+    }
+  } catch (error) { console.error('Error cargando config de actualizaciones:', error); }
+  return { success: true, config: { autoCheck: true, channel: 'beta' } };
+});
+
+ipcMain.handle('update:save-config', async (event, config) => {
+  // Guardar configuracion de actualizaciones
+  const updateConfigFile = path.join(DATA_DIR, 'update-config.json');
+  try {
+    fs.writeFileSync(updateConfigFile, JSON.stringify(config, null, 2));
+    return { success: true };
+  } catch (error) { console.error('Error guardando config de actualizaciones:', error); }
+  return { success: false, error: error.message };
+});
+
+// ========== SISTEMA DE NOTIFICACIONES ==========
+
+ipcMain.handle('notification:send', async (event, data) => {
+  // Enviar notificacion a todos los usuarios conectados
+  // En la version completa, esto se integrara con el bot de WhatsApp
+  addLog('info', `Notificacion preparada: ${data.title} - ${data.message}`);
+  
+  if (mainWindow) {
+    mainWindow.webContents.send('notification:received', data);
+  }
+  
+  return { success: true, message: 'Notificacion enviada' };
+});
+
+ipcMain.handle('notification:get-history', async () => {
+  // Obtener historial de notificaciones
+  const notificationsFile = path.join(DATA_DIR, 'notifications.json');
+  try {
+    if (fs.existsSync(notificationsFile)) {
+      const notifications = JSON.parse(fs.readFileSync(notificationsFile, 'utf8'));
+      return { success: true, notifications };
+    }
+  } catch (error) { console.error('Error cargando notificaciones:', error); }
+  return { success: true, notifications: [] };
+});
+
+ipcMain.handle('notification:mark-read', async (event, notificationId) => {
+  // Marcar notificacion como leida
+  return { success: true };
+});
+
+ipcMain.handle('notification:get-owners', async () => {
+  // Obtener lista de owners para notificaciones
+  const ownersFile = path.join(DATA_DIR, 'owners.json');
+  try {
+    if (fs.existsSync(ownersFile)) {
+      const owners = JSON.parse(fs.readFileSync(ownersFile, 'utf8'));
+      return { success: true, owners };
+    }
+  } catch (error) { console.error('Error cargando owners:', error); }
+  return { success: true, owners: [] };
+});
+
 // ========== LISTENERS ==========
 
 ipcMain.on('bot:log', (event, logEntry) => {
@@ -920,5 +1003,11 @@ ipcMain.on('bot-status', (event, data) => {
 ipcMain.on('bot-message', (event, data) => {
   if (mainWindow) {
     mainWindow.webContents.send('bot-message', data);
+  }
+});
+
+ipcMain.on('notification:received', (event, data) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('notification:received', data);
   }
 });
