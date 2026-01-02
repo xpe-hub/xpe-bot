@@ -1088,6 +1088,23 @@ ipcMain.handle('send-message', async (event, data) => {
 
 // ========== HANDLERS FALTANTES ==========
 
+ipcMain.handle('get-bot-server-url', async () => {
+  // Obtener URL del servidor del bot (si existe integración con suki-bot)
+  const config = loadConfig();
+  if (config.botServerUrl) {
+    return { url: config.botServerUrl };
+  }
+  // Por defecto, asumir que el bot corre en el mismo servidor
+  return { url: 'http://localhost:3000' };
+});
+
+ipcMain.handle('set-bot-server-url', async (event, url) => {
+  const config = loadConfig();
+  config.botServerUrl = url;
+  const success = saveConfig(config);
+  return { success, url };
+});
+
 ipcMain.handle('init-bot', async () => {
   return { success: true, message: 'Bot inicializado' };
 });
