@@ -18,7 +18,7 @@ let currentUser = null;
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const APP_VERSION = '3.0.0-beta';
+const APP_VERSION = '0.0.1';
 
 let db = { admins: [], vips: [], stats: { messages: 0, commands: 0, users: new Set(), dailyStats: {} } };
 

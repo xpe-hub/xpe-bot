@@ -5,48 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XPE-BOT Control Panel</title>
     <style>
+        /* ========== K-VRC DESIGN SYSTEM ========== */
+        :root {
+            /* K-VRC Orange Palette */
+            --k-orange-primary: #E86A38;
+            --k-orange-light: #FF8A5C;
+            --k-orange-dark: #C75A2A;
+            --k-orange-glow: rgba(232, 106, 56, 0.4);
+            
+            /* K-VRC Dark Palette - Friendly Dark */
+            --k-bg-dark: #12141A;
+            --k-bg-card: #1A1E28;
+            --k-bg-elevated: #222836;
+            --k-bg-glass: rgba(34, 40, 54, 0.7);
+            
+            /* Cyan Neon Accent (Like the robot's eyes) */
+            --k-cyan: #4DD0E1;
+            --k-cyan-glow: rgba(77, 208, 225, 0.5);
+            --k-cyan-dim: rgba(77, 208, 225, 0.2);
+            
+            /* Functional Colors */
+            --k-success: #4ADE80;
+            --k-warning: #FBBF24;
+            --k-danger: #F87171;
+            
+            /* Text */
+            --k-text-primary: #FFFFFF;
+            --k-text-secondary: #A0AEC0;
+            --k-text-muted: #718096;
+            
+            /* Spacing & Shapes */
+            --k-radius-sm: 8px;
+            --k-radius-md: 16px;
+            --k-radius-lg: 24px;
+            --k-radius-full: 9999px;
+            
+            /* Shadows */
+            --k-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --k-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --k-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --k-shadow-orange: 0 0 20px rgba(232, 106, 56, 0.3);
+            --k-shadow-cyan: 0 0 20px rgba(77, 208, 225, 0.3);
+            
+            /* Gradients */
+            --k-gradient-orange: linear-gradient(135deg, #E86A38 0%, #C75A2A 100%);
+            --k-gradient-dark: linear-gradient(135deg, #12141A 0%, #1A1E28 100%);
+            --k-gradient-glass: linear-gradient(135deg, rgba(34, 40, 54, 0.9) 0%, rgba(26, 30, 40, 0.95) 100%);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --bg-dark: #0a0a0f;
-            --bg-card: rgba(20, 20, 30, 0.95);
-            --bg-glass: rgba(255, 255, 255, 0.05);
-            --bg-glass-hover: rgba(255, 255, 255, 0.1);
-            --text: #ffffff;
-            --text-muted: #94a3b8;
-            --text-dim: #64748b;
-            --border: rgba(255, 255, 255, 0.1);
-            --border-hover: rgba(255, 255, 255, 0.2);
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
+            font-family: 'Segoe UI', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--k-bg-dark);
+            color: var(--k-text-primary);
             min-height: 100vh;
             overflow: hidden;
+            line-height: 1.6;
         }
 
+        /* ========== FRIENDLY BACKGROUND ========== */
         .background {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(232, 106, 56, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(77, 208, 225, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(34, 40, 54, 0.5) 0%, transparent 70%),
+                var(--k-bg-dark);
             z-index: -1;
         }
 
+        /* ========== LOGIN SCREEN ========== */
         .login-screen {
             position: fixed;
             top: 0;
@@ -57,6 +94,9 @@
             align-items: center;
             justify-content: center;
             z-index: 100;
+            background: 
+                radial-gradient(ellipse at 30% 20%, rgba(232, 106, 56, 0.15) 0%, transparent 60%),
+                var(--k-bg-dark);
         }
 
         .login-screen.hidden {
@@ -64,582 +104,1088 @@
         }
 
         .login-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 40px;
-            width: 400px;
+            background: var(--k-gradient-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(232, 106, 56, 0.2);
+            border-radius: var(--k-radius-lg);
+            padding: 48px;
+            width: 420px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 
+                var(--k-shadow-lg),
+                0 0 60px rgba(232, 106, 56, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--k-gradient-orange);
+        }
+
+        .login-card .bot-avatar {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            background: var(--k-gradient-orange);
+            border-radius: var(--k-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            box-shadow: var(--k-shadow-orange);
+            position: relative;
+        }
+
+        .login-card .bot-avatar::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: var(--k-radius-md);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            top: 0;
+            left: 0;
         }
 
         .login-card h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: var(--primary);
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: var(--k-gradient-orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .login-card p {
-            color: var(--text-muted);
-            margin-bottom: 25px;
+        .login-card .subtitle {
+            color: var(--k-text-secondary);
             font-size: 14px;
+            margin-bottom: 32px;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
             text-align: left;
         }
 
         .input-group label {
             display: block;
-            text-align: left;
             font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .input-group input,
-        .input-group textarea,
-        .input-group select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            background: var(--bg-glass);
-            color: var(--text);
-            font-size: 14px;
-            outline: none;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .input-group input:focus,
-        .input-group textarea:focus,
-        .input-group select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-        }
-
-        .input-group textarea {
-            min-height: 80px;
-            resize: vertical;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            color: var(--k-text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
+        .input-group input {
             width: 100%;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(232, 106, 56, 0.2);
+            border-radius: var(--k-radius-md);
+            color: var(--k-text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--k-orange-primary);
+            box-shadow: var(--k-shadow-orange);
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, var(--success), #16a34a);
+        .input-group input::placeholder {
+            color: var(--k-text-muted);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 16px 32px;
+            background: var(--k-gradient-orange);
+            border: none;
+            border-radius: var(--k-radius-md);
             color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(34, 197, 94, 0.4);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(239, 68, 68, 0.4);
-        }
-
-        .btn-secondary {
-            background: var(--bg-glass);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-glass-hover);
-        }
-
-        .btn-sm {
-            padding: 8px 15px;
-            font-size: 12px;
-        }
-
-        .btn-smaller {
-            padding: 6px 12px;
-            font-size: 11px;
-        }
-
-        .license-info {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
-        }
-
-        .license-info p {
-            margin-bottom: 8px;
-        }
-
-        .license-demo {
-            color: var(--primary);
-            font-family: monospace;
-            font-size: 11px;
-        }
-
-        .window {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-container {
-            display: none;
-            flex: 1;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
             overflow: hidden;
         }
 
-        .main-container.active {
-            display: flex;
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--k-shadow-orange);
         }
 
-        .titlebar {
-            height: 36px;
-            background: rgba(0, 0, 0, 0.5);
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--k-text-muted);
+        }
+
+        .login-footer span {
+            color: var(--k-orange-primary);
+        }
+
+        /* ========== MAIN APPLICATION LAYOUT ========== */
+        .app-container {
+            display: none;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .app-container.visible {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            background: var(--k-gradient-glass);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+        }
+
+        .sidebar-header {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-logo {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 10px;
-            -webkit-app-region: drag;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
+            gap: 12px;
         }
 
-        .titlebar-title {
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .titlebar-title span {
-            color: var(--primary);
-        }
-
-        .titlebar-buttons {
-            display: flex;
-            gap: 5px;
-            -webkit-app-region: no-drag;
-        }
-
-        .titlebar-btn {
-            width: 28px;
-            height: 28px;
-            border: none;
-            background: var(--bg-glass);
-            color: var(--text);
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
+        .sidebar-logo .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--k-gradient-orange);
+            border-radius: var(--k-radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .titlebar-btn:hover {
-            background: var(--bg-glass-hover);
-        }
-
-        .titlebar-btn.close:hover {
-            background: var(--danger);
-        }
-
-        .sidebar {
-            width: 220px;
-            background: var(--bg-card);
-            border-right: 1px solid var(--border);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .logo h1 {
             font-size: 24px;
+            box-shadow: var(--k-shadow-orange);
+        }
+
+        .sidebar-logo .logo-text h2 {
+            font-size: 18px;
             font-weight: 700;
-            color: var(--primary);
+            color: var(--k-text-primary);
         }
 
-        .logo p {
+        .sidebar-logo .logo-text span {
             font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 5px;
-        }
-
-        .nav-section {
-            margin-bottom: 20px;
-        }
-
-        .nav-section-title {
-            font-size: 10px;
+            color: var(--k-orange-primary);
+            font-weight: 600;
             text-transform: uppercase;
-            color: var(--text-dim);
-            margin-bottom: 10px;
-            padding-left: 10px;
             letter-spacing: 1px;
         }
 
-        .nav-item {
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-
-        .nav-item:hover {
-            background: var(--bg-glass);
-            color: var(--text);
-        }
-
-        .nav-item.active {
-            background: rgba(99, 102, 241, 0.2);
-            color: var(--primary);
-        }
-
-        .main-content {
+        .sidebar-nav {
             flex: 1;
-            padding: 25px;
+            padding: 24px 12px;
             overflow-y: auto;
-            display: none;
         }
 
-        .main-content.active {
-            display: block;
+        .nav-section {
+            margin-bottom: 24px;
         }
 
-        .page-header {
-            margin-bottom: 25px;
-        }
-
-        .page-header h1 {
-            font-size: 22px;
-            margin-bottom: 5px;
-        }
-
-        .page-header p {
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 18px;
-        }
-
-        .stat-card h3 {
+        .nav-section-title {
             font-size: 11px;
-            color: var(--text-muted);
+            font-weight: 700;
+            color: var(--k-text-muted);
             text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 12px;
             margin-bottom: 8px;
         }
 
-        .stat-card .value {
-            font-size: 26px;
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: var(--k-radius-md);
+            color: var(--k-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: rgba(232, 106, 56, 0.1);
+            color: var(--k-text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--k-gradient-orange);
+            color: white;
+            box-shadow: var(--k-shadow-orange);
+        }
+
+        .nav-item .nav-icon {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .nav-item .nav-badge {
+            margin-left: auto;
+            background: var(--k-danger);
+            color: white;
+            font-size: 11px;
             font-weight: 700;
+            padding: 2px 8px;
+            border-radius: var(--k-radius-full);
         }
 
-        .stat-card .value.success { color: var(--success); }
-        .stat-card .value.danger { color: var(--danger); }
-        .stat-card .value.warning { color: var(--warning); }
-        .stat-card .value.info { color: var(--info); }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+        .sidebar-footer {
+            padding: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .card h2 {
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--k-radius-md);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--k-gradient-orange);
+            border-radius: var(--k-radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
             font-size: 16px;
-            margin-bottom: 15px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--k-text-primary);
+        }
+
+        .user-status {
+            font-size: 12px;
+            color: var(--k-success);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .user-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--k-success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--k-success);
+        }
+
+        /* ========== MAIN CONTENT AREA ========== */
+        .main-area {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            height: 70px;
+            background: rgba(26, 30, 40, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--k-text-primary);
+        }
+
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .search-box {
             display: flex;
             align-items: center;
             gap: 8px;
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--k-radius-full);
+            width: 280px;
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--k-text-primary);
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .search-box input::placeholder {
+            color: var(--k-text-muted);
+        }
+
+        .search-box span {
+            color: var(--k-text-muted);
+            font-size: 16px;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--k-radius-md);
+            color: var(--k-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: rgba(232, 106, 56, 0.2);
+            border-color: rgba(232, 106, 56, 0.3);
+            color: var(--k-orange-primary);
+        }
+
+        .icon-btn .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 18px;
+            height: 18px;
+            background: var(--k-danger);
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        /* Content Scroll Area */
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .content-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content-scroll::-webkit-scrollbar-thumb {
+            background: rgba(232, 106, 56, 0.3);
+            border-radius: 4px;
+        }
+
+        .content-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(232, 106, 56, 0.5);
+        }
+
+        /* ========== DASHBOARD CARDS ========== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--k-gradient-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--k-radius-lg);
+            padding: 28px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--k-gradient-orange);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--k-shadow-lg);
+            border-color: rgba(232, 106, 56, 0.2);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card.warning::before {
+            background: var(--k-warning);
+            opacity: 1;
+        }
+
+        .stat-card.success::before {
+            background: var(--k-success);
+            opacity: 1;
+        }
+
+        .stat-card.info::before {
+            background: var(--k-cyan);
+            opacity: 1;
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--k-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-card:nth-child(1) .stat-icon {
+            background: rgba(232, 106, 56, 0.15);
+            color: var(--k-orange-primary);
+        }
+
+        .stat-card:nth-child(2) .stat-icon {
+            background: rgba(77, 208, 225, 0.15);
+            color: var(--k-cyan);
+        }
+
+        .stat-card:nth-child(3) .stat-icon {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--k-success);
+        }
+
+        .stat-card:nth-child(4) .stat-icon {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--k-warning);
+        }
+
+        .stat-trend {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: var(--k-radius-full);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-trend.up {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--k-success);
+        }
+
+        .stat-trend.down {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--k-danger);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--k-text-primary);
+            margin-bottom: 4px;
+            letter-spacing: -1px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--k-text-secondary);
+        }
+
+        /* ========== CONTENT SECTIONS ========== */
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--k-text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--k-text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ========== CARDS & PANELS ========== */
+        .card {
+            background: var(--k-gradient-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--k-radius-lg);
+            padding: 28px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(232, 106, 56, 0.2);
         }
 
         .card-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .card-header h2 {
-            margin-bottom: 0;
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--k-text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .status-indicator {
-            width: 10px;
-            height: 10px;
+        .card-title span {
+            font-size: 20px;
+        }
+
+        /* ========== BOT STATUS CARD ========== */
+        .bot-status-card {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .bot-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .bot-avatar-large {
+            width: 80px;
+            height: 80px;
+            background: var(--k-gradient-orange);
+            border-radius: var(--k-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            box-shadow: var(--k-shadow-orange);
+            position: relative;
+        }
+
+        .bot-avatar-large .status-dot {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 16px;
+            height: 16px;
+            background: var(--k-success);
+            border: 3px solid var(--k-bg-card);
             border-radius: 50%;
-            background: var(--danger);
+            box-shadow: 0 0 12px var(--k-success);
+            animation: pulse 2s infinite;
         }
 
-        .status-indicator.running, .status-indicator.online {
-            background: var(--success);
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
         }
 
-        .status-indicator.connecting, .status-indicator.waiting_qr {
-            background: var(--warning);
+        .bot-details h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
         }
 
-        .control-buttons {
+        .bot-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--k-success);
+        }
+
+        .bot-status.disconnected {
+            color: var(--k-text-muted);
+        }
+
+        .bot-status.connecting {
+            color: var(--k-warning);
+        }
+
+        .bot-controls {
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
         }
 
-        .control-buttons .btn {
-            flex: 1;
-            min-width: 100px;
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border-radius: var(--k-radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
         }
 
-        .logs-box {
-            background: #0d0d12;
-            border-radius: 10px;
-            padding: 15px;
-            height: 250px;
+        .btn-primary {
+            background: var(--k-gradient-orange);
+            color: white;
+            box-shadow: var(--k-shadow-orange);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(232, 106, 56, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--k-text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--k-danger);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(248, 113, 113, 0.25);
+        }
+
+        .btn-success {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--k-success);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(74, 222, 128, 0.25);
+        }
+
+        /* ========== LOGS PANEL ========== */
+        .logs-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--k-radius-md);
+            padding: 20px;
+            max-height: 400px;
             overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
-            line-height: 1.6;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
         }
 
         .log-line {
-            margin-bottom: 5px;
-            padding: 3px 0;
-        }
-
-        .log-line.error { color: var(--danger); }
-        .log-line.success { color: var(--success); }
-        .log-line.warning { color: var(--warning); }
-        .log-line.info { color: var(--info); }
-        .log-time { color: var(--text-dim); margin-right: 8px; }
-
-        .notification {
-            position: fixed;
-            top: 50px;
-            right: 20px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 15px 20px;
-            z-index: 1000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            max-width: 350px;
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success { border-left: 4px solid var(--success); }
-        .notification.error { border-left: 4px solid var(--danger); }
-        .notification.warning { border-left: 4px solid var(--warning); }
-        .notification.info { border-left: 4px solid var(--info); }
-
-        .text-muted { color: var(--text-muted); }
-        .mt-2 { margin-top: 10px; }
-        .mb-2 { margin-bottom: 10px; }
-        .hidden { display: none !important; }
-
-        .browse-btn {
-            margin-top: 8px;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary);
-        }
-
-        /* Editor Styles */
-        .editor-layout {
-            display: grid;
-            grid-template-columns: 250px 1fr 350px;
-            gap: 15px;
-            height: calc(100vh - 150px);
-            min-height: 500px;
-        }
-
-        .file-explorer {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             display: flex;
-            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
         }
 
-        .file-explorer-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .log-line:last-child {
+            border-bottom: none;
         }
 
-        .file-explorer-header h3 {
-            font-size: 14px;
-            margin: 0;
+        .log-time {
+            color: var(--k-text-muted);
+            font-size: 12px;
+            white-space: nowrap;
         }
 
-        .file-explorer-content {
+        .log-message {
             flex: 1;
+            color: var(--k-text-secondary);
+        }
+
+        .log-line.info .log-message { color: var(--k-cyan); }
+        .log-line.success .log-message { color: var(--k-success); }
+        .log-line.warning .log-message { color: var(--k-warning); }
+        .log-line.error .log-message { color: var(--k-danger); }
+
+        /* ========== NOTIFICATIONS PANEL ========== */
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--k-radius-md);
+            margin-bottom: 12px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .notification-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .notification-item.unread {
+            border-left-color: var(--k-orange-primary);
+            background: rgba(232, 106, 56, 0.05);
+        }
+
+        .notification-item.read {
+            opacity: 0.6;
+        }
+
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--k-radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .notification-item.update .notification-icon {
+            background: rgba(232, 106, 56, 0.15);
+            color: var(--k-orange-primary);
+        }
+
+        .notification-item.info .notification-icon {
+            background: rgba(77, 208, 225, 0.15);
+            color: var(--k-cyan);
+        }
+
+        .notification-item.warning .notification-icon {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--k-warning);
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--k-text-primary);
+            margin-bottom: 4px;
+        }
+
+        .notification-message {
+            font-size: 13px;
+            color: var(--k-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .notification-time {
+            font-size: 12px;
+            color: var(--k-text-muted);
+        }
+
+        /* ========== SETTINGS PANEL ========== */
+        .settings-group {
+            margin-bottom: 32px;
+        }
+
+        .settings-group-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--k-text-primary);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .setting-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--k-text-primary);
+            margin-bottom: 4px;
+        }
+
+        .setting-info p {
+            font-size: 13px;
+            color: var(--k-text-secondary);
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            width: 52px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--k-radius-full);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle.active {
+            background: var(--k-gradient-orange);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: all 0.3s ease;
+            box-shadow: var(--k-shadow-sm);
+        }
+
+        .toggle.active::after {
+            left: 27px;
+        }
+
+        /* Input with Icon */
+        .input-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--k-radius-md);
+            transition: all 0.2s ease;
+        }
+
+        .input-with-icon:focus-within {
+            border-color: var(--k-orange-primary);
+            box-shadow: 0 0 0 3px rgba(232, 106, 56, 0.1);
+        }
+
+        .input-with-icon span {
+            color: var(--k-text-muted);
+            font-size: 18px;
+        }
+
+        .input-with-icon input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--k-text-primary);
+            font-size: 14px;
+        }
+
+        /* ========== FILE EXPLORER ========== */
+        .file-tree {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--k-radius-md);
+            padding: 16px;
+            max-height: 500px;
             overflow-y: auto;
-            padding: 10px;
         }
 
         .file-tree-root {
-            font-size: 13px;
+            padding: 4px 0;
+        }
+
+        .tree-folder {
+            padding: 8px 12px;
+            border-radius: var(--k-radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tree-folder:hover {
+            background: rgba(232, 106, 56, 0.1);
         }
 
         .tree-toggle {
             display: inline-block;
-            width: 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.2s;
+            margin-right: 8px;
+            color: var(--k-text-muted);
+            font-size: 10px;
+            transition: transform 0.2s ease;
         }
 
         .tree-toggle.expanded {
             transform: rotate(90deg);
         }
 
-        .tree-folder {
-            margin-left: 0;
-        }
-
         .tree-folder-name {
-            cursor: pointer;
-            padding: 3px 5px;
-            border-radius: 4px;
-        }
-
-        .tree-folder-name:hover {
-            background: var(--bg-glass);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--k-text-primary);
         }
 
         .tree-children {
-            margin-left: 16px;
+            padding-left: 28px;
         }
 
         .tree-file {
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 8px 12px;
+            border-radius: var(--k-radius-sm);
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
+            gap: 10px;
+            transition: all 0.2s ease;
         }
 
         .tree-file:hover {
-            background: var(--bg-glass);
+            background: rgba(77, 208, 225, 0.1);
         }
 
         .tree-file.active {
-            background: rgba(99, 102, 241, 0.3);
-            color: var(--primary);
+            background: rgba(232, 106, 56, 0.15);
+            color: var(--k-orange-primary);
         }
 
         .file-icon {
-            font-size: 14px;
+            font-size: 16px;
         }
 
-        .code-editor-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+        .file-name {
+            font-size: 13px;
+            color: var(--k-text-secondary);
+        }
+
+        .tree-file.active .file-name {
+            color: var(--k-orange-primary);
+            font-weight: 600;
+        }
+
+        /* ========== CODE EDITOR ========== */
+        .editor-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 24px;
+            height: calc(100vh - 200px);
+        }
+
+        .editor-main {
             display: flex;
             flex-direction: column;
+            background: var(--k-gradient-glass);
+            border-radius: var(--k-radius-lg);
             overflow: hidden;
         }
 
-        .code-editor-header {
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--border);
+        .editor-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            background: rgba(0, 0, 0, 0.2);
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .code-editor-header h3 {
-            font-size: 13px;
-            margin: 0;
+        .editor-tabs {
             display: flex;
-            align-items: center;
             gap: 8px;
+        }
+
+        .editor-tab {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--k-radius-sm);
+            font-size: 13px;
+            color: var(--k-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .editor-tab.active {
+            background: var(--k-orange-primary);
+            color: white;
         }
 
         .editor-actions {
@@ -649,100 +1195,148 @@
 
         .code-editor {
             flex: 1;
-            background: #1e1e1e;
+            background: rgba(0, 0, 0, 0.4);
             border: none;
-            color: #d4d4d4;
-            padding: 15px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.5;
+            padding: 20px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--k-text-primary);
             resize: none;
             outline: none;
-            tab-size: 4;
         }
 
         .code-editor::placeholder {
-            color: #6a6a6a;
+            color: var(--k-text-muted);
         }
 
+        /* AI Panel */
         .ai-panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            background: var(--k-gradient-glass);
+            border-radius: var(--k-radius-lg);
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
 
-        .ai-panel-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            background: rgba(99, 102, 241, 0.1);
-        }
-
-        .ai-panel-header h3 {
-            font-size: 14px;
-            margin: 0 0 10px 0;
+        .ai-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
-        .ai-panel-content {
+        .ai-avatar {
+            width: 48px;
+            height: 48px;
+            background: var(--k-gradient-orange);
+            border-radius: var(--k-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: var(--k-shadow-orange);
+        }
+
+        .ai-info h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--k-text-primary);
+        }
+
+        .ai-info span {
+            font-size: 12px;
+            color: var(--k-cyan);
+        }
+
+        .ai-prompt-area {
             flex: 1;
-            overflow-y: auto;
-            padding: 15px;
             display: flex;
             flex-direction: column;
         }
 
-        .ai-prompt-section {
-            margin-bottom: 15px;
-        }
-
-        .ai-prompt-section label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .ai-prompt {
-            width: 100%;
-            min-height: 100px;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-glass);
-            color: var(--text);
-            font-size: 13px;
-            resize: vertical;
-            font-family: inherit;
-        }
-
-        .ai-prompt:focus {
-            border-color: var(--primary);
+        .ai-prompt-area textarea {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--k-radius-md);
+            padding: 16px;
+            color: var(--k-text-primary);
+            font-size: 14px;
+            resize: none;
             outline: none;
+            margin-bottom: 16px;
+        }
+
+        .ai-prompt-area textarea:focus {
+            border-color: var(--k-orange-primary);
+        }
+
+        .ai-prompt-area textarea::placeholder {
+            color: var(--k-text-muted);
+        }
+
+        .ai-response {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--k-radius-md);
+            padding: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--k-text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .ai-result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .ai-status {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: var(--k-radius-full);
+        }
+
+        .ai-status.success {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--k-success);
+        }
+
+        .ai-status.error {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--k-danger);
+        }
+
+        .ai-code-preview {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: var(--k-radius-sm);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--k-cyan);
+            white-space: pre-wrap;
+            word-break: break-all;
         }
 
         .ai-loading {
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             padding: 20px;
-            color: var(--text-muted);
+            color: var(--k-text-secondary);
         }
 
-        .ai-loading.active {
-            display: flex;
-        }
-
-        .spinner {
+        .ai-loading .spinner {
             width: 20px;
             height: 20px;
-            border: 2px solid var(--border);
-            border-top-color: var(--primary);
+            border: 2px solid rgba(232, 106, 56, 0.2);
+            border-top-color: var(--k-orange-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -751,478 +1345,877 @@
             to { transform: rotate(360deg); }
         }
 
-        .ai-result {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 10px;
+        /* ========== NOTIFICATION TOAST ========== */
+        .notification {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            background: var(--k-gradient-glass);
+            backdrop-filter: blur(20px);
+            border-radius: var(--k-radius-md);
+            border-left: 4px solid var(--k-cyan);
+            box-shadow: var(--k-shadow-lg);
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+            max-width: 400px;
         }
 
-        .ai-result-header {
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left-color: var(--k-success);
+        }
+
+        .notification.warning {
+            border-left-color: var(--k-warning);
+        }
+
+        .notification.error {
+            border-left-color: var(--k-danger);
+        }
+
+        .notification-content {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
+            align-items: flex-start;
+            gap: 12px;
         }
 
-        .ai-status {
-            font-size: 12px;
-            font-weight: 600;
+        .notification-icon {
+            font-size: 20px;
         }
 
-        .ai-status.success { color: var(--success); }
-        .ai-status.error { color: var(--danger); }
+        .notification-text {
+            flex: 1;
+        }
 
-        .btn-apply {
-            padding: 6px 12px;
-            background: var(--success);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
+        .notification-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--k-text-primary);
+            margin-bottom: 2px;
+        }
+
+        .notification-message {
+            font-size: 13px;
+            color: var(--k-text-secondary);
+        }
+
+        /* ========== WINDOW CONTROLS ========== */
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
 
-        .btn-apply:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(34, 197, 94, 0.3);
+        .window-btn.close { background: #FF5F57; }
+        .window-btn.minimize { background: #FFBD2E; }
+        .window-btn.maximize { background: #28CA41; }
+        
+        .window-btn:hover { filter: brightness(1.2); }
+
+        /* ========== EMPTY STATES ========== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--k-text-secondary);
         }
 
-        .ai-code-preview {
-            background: #0d0d12;
-            border-radius: 6px;
-            padding: 12px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #d4d4d4;
-            white-space: pre-wrap;
-            max-height: 200px;
-            overflow-y: auto;
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
 
-        .ai-error {
-            color: var(--danger);
-            font-size: 12px;
-        }
-
-        .ai-info {
-            color: var(--text-muted);
-            font-size: 12px;
-            margin-top: 10px;
-        }
-
-        .editor-status {
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 4px;
-            background: var(--bg-glass);
-        }
-
-        .editor-status.saved { color: var(--success); }
-        .editor-status.modified { color: var(--warning); }
-        .editor-status.protected { color: var(--danger); }
-
-        /* Config Section */
-        .config-section {
-            margin-top: auto;
-            border-top: 1px solid var(--border);
-            padding-top: 15px;
-        }
-
-        .config-section h4 {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-        }
-
-        .api-key-input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--bg-glass);
-            color: var(--text);
-            font-size: 12px;
+        .empty-state h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--k-text-primary);
             margin-bottom: 8px;
         }
 
-        .api-key-input:focus {
-            outline: none;
-            border-color: var(--primary);
+        .empty-state p {
+            font-size: 14px;
+            max-width: 300px;
+            margin: 0 auto;
         }
 
-        /* Backups Section */
-        .backups-list {
-            max-height: 150px;
-            overflow-y: auto;
-            margin-top: 10px;
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1200px) {
+            .app-container.visible {
+                grid-template-columns: 80px 1fr;
+            }
+            
+            .sidebar-logo .logo-text,
+            .nav-section-title,
+            .nav-item span:not(.nav-icon),
+            .user-details {
+                display: none;
+            }
+            
+            .nav-item {
+                justify-content: center;
+            }
+            
+            .sidebar {
+                padding: 24px 8px;
+            }
+            
+            .sidebar-header {
+                padding: 0 8px 24px;
+            }
+            
+            .sidebar-logo {
+                justify-content: center;
+            }
         }
 
-        .backup-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 10px;
-            background: var(--bg-glass);
-            border-radius: 6px;
-            margin-bottom: 5px;
-            font-size: 11px;
-        }
-
-        .backup-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .backup-name {
-            font-family: monospace;
-            color: var(--text);
-        }
-
-        .backup-date {
-            color: var(--text-muted);
-            font-size: 10px;
-        }
-
-        .btn-restore {
-            padding: 4px 8px;
-            background: var(--info);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 10px;
-            cursor: pointer;
-        }
-
-        .btn-restore:hover {
-            background: var(--primary);
-        }
-
-        .empty-message {
-            color: var(--text-dim);
-            font-size: 12px;
-            text-align: center;
-            padding: 20px;
-        }
-
+        /* ========== EDITOR EMPTY STATE ========== */
         .editor-empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: var(--text-dim);
+            color: var(--k-text-muted);
             text-align: center;
             padding: 40px;
         }
 
-        .editor-empty-state .icon {
+        .editor-empty-state span {
             font-size: 48px;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
             opacity: 0.5;
         }
 
         .editor-empty-state p {
-            font-size: 13px;
+            font-size: 14px;
+        }
+
+        /* ========== BACKUP LIST ========== */
+        .backup-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--k-radius-md);
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .backup-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .backup-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .backup-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--k-text-primary);
+        }
+
+        .backup-date {
+            font-size: 12px;
+            color: var(--k-text-muted);
+        }
+
+        /* ========== EDITOR STATUS ========== */
+        .editor-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: var(--k-radius-full);
+        }
+
+        .editor-status.saved {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--k-success);
+        }
+
+        .editor-status.modified {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--k-warning);
+        }
+
+        .editor-status.protected {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--k-danger);
+        }
+
+        /* ========== VIEW: DASHBOARD ========== */
+        #view-dashboard {
+            display: none;
+        }
+
+        #view-dashboard.active {
+            display: block;
+        }
+
+        /* ========== VIEW: BOTS ========== */
+        #view-bots {
+            display: none;
+        }
+
+        #view-bots.active {
+            display: block;
+        }
+
+        /* ========== VIEW: EDITOR ========== */
+        #view-editor {
+            display: none;
+        }
+
+        #view-editor.active {
+            display: block;
+        }
+
+        /* ========== VIEW: SETTINGS ========== */
+        #view-settings {
+            display: none;
+        }
+
+        #view-settings.active {
+            display: block;
+        }
+
+        /* ========== VIEW: NOTIFICATIONS ========== */
+        #view-notifications {
+            display: none;
+        }
+
+        #view-notifications.active {
+            display: block;
+        }
+
+        /* ========== TWO COLUMN LAYOUT ========== */
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ========== PATH INPUTS ========== */
+        .path-input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .path-input-group input {
+            flex: 1;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--k-radius-md);
+            color: var(--k-text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .path-input-group input:focus {
+            border-color: var(--k-orange-primary);
+            box-shadow: 0 0 0 3px rgba(232, 106, 56, 0.1);
+        }
+
+        .path-input-group input::placeholder {
+            color: var(--k-text-muted);
+        }
+
+        .path-input-group button {
+            white-space: nowrap;
+        }
+
+        /* ========== STATUS INDICATOR ========== */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-indicator.running {
+            background: var(--k-success);
+            box-shadow: 0 0 10px var(--k-success);
+        }
+
+        .status-indicator.connecting {
+            background: var(--k-warning);
+            animation: pulse 1s infinite;
+        }
+
+        .status-indicator.stopped {
+            background: var(--k-text-muted);
+        }
+
+        /* ========== MESSAGING PANEL ========== */
+        .message-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .form-row .input-with-icon {
+            flex: 1;
+        }
+
+        textarea.message-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--k-radius-md);
+            color: var(--k-text-primary);
+            font-size: 14px;
+            resize: vertical;
+            outline: none;
+            font-family: inherit;
+        }
+
+        textarea.message-input:focus {
+            border-color: var(--k-orange-primary);
+        }
+
+        textarea.message-input::placeholder {
+            color: var(--k-text-muted);
         }
     </style>
 </head>
 <body>
     <div class="background"></div>
 
-    <!-- Pantalla de Login -->
+    <!-- Login Screen -->
     <div class="login-screen" id="loginScreen">
         <div class="login-card">
-            <h1>⚡ XPE-BOT</h1>
-            <p>Panel de Control</p>
-
+            <div class="bot-avatar">🤖</div>
+            <h1>XPE-BOT</h1>
+            <p class="subtitle">Panel de Control v0.0.1</p>
+            
             <div class="input-group">
-                <label>Tu Nombre de Usuario</label>
-                <input type="text" id="usernameInput" placeholder="Ingresa tu nombre" autocomplete="off">
+                <label for="usernameInput">Nombre de Usuario</label>
+                <input type="text" id="usernameInput" placeholder="Ingresa tu nombre..." autocomplete="off">
             </div>
-
-            <button class="btn btn-primary" id="loginBtn" onclick="login()">
-                Acceder
-            </button>
+            
+            <button class="btn-login" onclick="login()">Entrar al Panel</button>
+            
+            <div class="login-footer">
+                <span>Diseño inspirado en K-VRC</span>
+            </div>
         </div>
     </div>
 
-    <!-- Contenedor Principal -->
-    <div class="window" id="mainContainer">
-        <!-- Title Bar -->
-        <div class="titlebar">
-            <div class="titlebar-title">
-                <span>⚡</span> XPE-BOT Control Panel
-            </div>
-            <div class="titlebar-buttons">
-                <button class="titlebar-btn" onclick="minimizeWindow()">─</button>
-                <button class="titlebar-btn" onclick="maximizeWindow()">□</button>
-                <button class="titlebar-btn close" onclick="closeWindow()">✕</button>
-            </div>
-        </div>
-
-        <!-- Contenido Principal -->
-        <div class="main-container active" id="mainContent">
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <div class="logo">
-                    <h1>XPE-BOT</h1>
-                    <p>Control Panel</p>
+    <!-- Main Application -->
+    <div class="app-container" id="mainContent">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">🤖</div>
+                    <div class="logo-text">
+                        <h2>XPE-BOT</h2>
+                        <span>v0.0.1</span>
+                    </div>
                 </div>
-
+            </div>
+            
+            <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Principal</div>
                     <div class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')">
-                        <span>📊</span> Dashboard
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboard</span>
                     </div>
                     <div class="nav-item" data-view="bots" onclick="navigateTo('bots')">
-                        <span>🤖</span> Bots
-                    </div>
-                    <div class="nav-item" data-view="messages" onclick="navigateTo('messages')">
-                        <span>💬</span> Mensajes
-                    </div>
-                    <div class="nav-item" data-view="editor" onclick="navigateTo('editor')">
-                        <span>🧠</span> Editor IA
+                        <span class="nav-icon">🤖</span>
+                        <span>Mis Bots</span>
                     </div>
                 </div>
-
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Herramientas</div>
+                    <div class="nav-item" data-view="editor" onclick="navigateTo('editor')">
+                        <span class="nav-icon">📝</span>
+                        <span>Editor de Código</span>
+                    </div>
+                    <div class="nav-item" data-view="notifications" onclick="navigateTo('notifications')">
+                        <span class="nav-icon">🔔</span>
+                        <span>Notificaciones</span>
+                        <span class="nav-badge">3</span>
+                    </div>
+                </div>
+                
                 <div class="nav-section">
                     <div class="nav-section-title">Sistema</div>
-                    <div class="nav-item" onclick="window.open('https://xpeteam.com', '_blank')">
-                        <span>🌐</span> Website
+                    <div class="nav-item" data-view="settings" onclick="navigateTo('settings')">
+                        <span class="nav-icon">⚙️</span>
+                        <span>Configuración</span>
+                    </div>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Usuario</div>
+                        <div class="user-status">En línea</div>
                     </div>
                 </div>
             </div>
+        </aside>
 
-            <!-- Vista: Dashboard -->
-            <div class="main-content active" id="view-dashboard">
-                <div class="page-header">
-                    <h1>📊 Dashboard</h1>
-                    <p>Resumen general del sistema</p>
+        <!-- Main Area -->
+        <main class="main-area">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="window-controls">
+                    <div class="window-btn close" onclick="closeWindow()"></div>
+                    <div class="window-btn minimize" onclick="minimizeWindow()"></div>
+                    <div class="window-btn maximize" onclick="maximizeWindow()"></div>
                 </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>💬 Mensajes</h3>
-                        <div class="value" id="statMessages">0</div>
+                
+                <h2 class="page-title" id="pageTitle">Dashboard</h2>
+                
+                <div class="top-bar-actions">
+                    <div class="search-box">
+                        <span>🔍</span>
+                        <input type="text" placeholder="Buscar...">
                     </div>
-                    <div class="stat-card">
-                        <h3>⚡ Comandos</h3>
-                        <div class="value" id="statCommands">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>👤 Usuarios</h3>
-                        <div class="value" id="statUsers">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>⏱️ Uptime</h3>
-                        <div class="value info" id="statUptime">0h 0m</div>
-                    </div>
-                </div>
-
-                <!-- Configuración del Bot -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2>📁 Ruta del Bot</h2>
-                    </div>
-                    <div class="input-group">
-                        <label>Ubicación de tu bot (donde está el index.js o main.js)</label>
-                        <input type="text" id="botPath" placeholder="C:\Users\marti\OneDrive\Desktop\bot-xpe-nett-completo-v3-WORKING\bot-xpe-nett-completo">
-                    </div>
-                    <button class="btn btn-secondary browse-btn" onclick="selectBotFolder()">
-                        📂 Seleccionar Carpeta
+                    <button class="icon-btn" onclick="checkForUpdates()">
+                        🔄
+                        <span class="badge" id="updateBadge" style="display: none;">1</span>
                     </button>
-                    <button class="btn btn-primary" style="margin-top: 15px;" onclick="saveBotPath()">
-                        💾 Guardar Ruta
+                    <button class="icon-btn" onclick="navigateTo('notifications')">
+                        🔔
+                        <span class="badge">3</span>
                     </button>
                 </div>
+            </header>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2>
-                            <div class="status-indicator" id="statusIndicator"></div>
-                            🤖 Control del Bot
-                        </h2>
-                    </div>
-                    <div class="control-buttons">
-                        <button class="btn btn-primary" id="initBotBtn" onclick="startExternalBot()">
-                            ▶ Iniciar Bot
-                        </button>
-                        <button class="btn btn-danger" id="stopBotBtn" onclick="stopExternalBot()">
-                            ■ Detener Bot
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2>📋 Logs</h2>
-                        <button class="btn btn-sm btn-secondary" onclick="refreshCurrentView()">🔄 Actualizar</button>
-                    </div>
-                    <div class="logs-box" id="logsBox">
-                        <div class="log-line info">
-                            <span class="log-time">[Sistema]</span>
-                            Panel iniciado correctamente
+            <!-- Content Area -->
+            <div class="content-scroll">
+                <!-- Dashboard View -->
+                <div class="view-section active" id="view-dashboard">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon">💬</div>
+                                <span class="stat-trend up">↑ 12%</span>
+                            </div>
+                            <div class="stat-value" id="statMessages">0</div>
+                            <div class="stat-label">Mensajes Procesados</div>
+                        </div>
+                        
+                        <div class="stat-card info">
+                            <div class="stat-header">
+                                <div class="stat-icon">⚡</div>
+                                <span class="stat-trend up">↑ 8%</span>
+                            </div>
+                            <div class="stat-value" id="statCommands">0</div>
+                            <div class="stat-label">Comandos Ejecutados</div>
+                        </div>
+                        
+                        <div class="stat-card success">
+                            <div class="stat-header">
+                                <div class="stat-icon">👥</div>
+                            </div>
+                            <div class="stat-value" id="statUsers">0</div>
+                            <div class="stat-label">Usuarios Activos</div>
+                        </div>
+                        
+                        <div class="stat-card warning">
+                            <div class="stat-header">
+                                <div class="stat-icon">⏱️</div>
+                            </div>
+                            <div class="stat-value" id="statUptime">0h 0m</div>
+                            <div class="stat-label">Tiempo en Línea</div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Vista: Bots -->
-            <div class="main-content" id="view-bots">
-                <div class="page-header">
-                    <h1>🤖 Gestión de Bots</h1>
-                    <p>Administra las sesiones del bot</p>
-                </div>
+                    <div class="two-column">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <span>🤖</span>
+                                    Estado del Bot
+                                </h3>
+                                <div id="editorStatus" class="editor-status saved">Desconectado</div>
+                            </div>
+                            <div class="bot-status-card">
+                                <div class="bot-info">
+                                    <div class="bot-avatar-large">
+                                        🤖
+                                        <div class="status-dot" id="statusDot" style="display: none;"></div>
+                                    </div>
+                                    <div class="bot-details">
+                                        <h3>XPE-BOT Principal</h3>
+                                        <div class="bot-status disconnected" id="botStatus">
+                                            <span class="status-indicator stopped"></span>
+                                            <span id="statusText">Sin conectar</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bot-controls">
+                                    <button class="btn btn-success" onclick="startExternalBot()">▶ Iniciar</button>
+                                    <button class="btn btn-danger" onclick="stopExternalBot()">■ Detener</button>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="card">
-                    <h2>📁 Configuración</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 13px;">
-                        Selecciona la carpeta donde está tu bot de WhatsApp.
-                    </p>
-                    <div class="input-group">
-                        <label>Ruta del Bot</label>
-                        <input type="text" id="botsViewPath" placeholder="C:\Users\...\bot-xpe-nett-completo">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <span>📋</span>
+                                    Registro de Actividad
+                                </h3>
+                                <button class="btn btn-secondary" onclick="clearLogs()" style="padding: 8px 16px; font-size: 12px;">Limpiar</button>
+                            </div>
+                            <div class="logs-container" id="logsBox">
+                                <div class="empty-state" style="padding: 20px;">
+                                    <p>Sin actividad registrada</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="selectBotFolderFromView()">
-                        📂 Seleccionar
-                    </button>
-                    <button class="btn btn-primary" style="margin-top: 15px;" onclick="saveBotPathFromView()">
-                        💾 Guardar
-                    </button>
-                </div>
-            </div>
 
-            <!-- Vista: Mensajes -->
-            <div class="main-content" id="view-messages">
-                <div class="page-header">
-                    <h1>💬 Monitoreo</h1>
-                    <p>Mensajes en tiempo real</p>
-                </div>
-
-                <div class="card">
-                    <h2>💬 Mensajes Recibidos</h2>
-                    <div id="messagesContainer">
-                        <p class="text-muted">Los mensajes aparecerán aquí cuando el bot reciba actividad</p>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>✉️ Envío Rápido</h2>
-                    <div class="input-group">
-                        <label>Destinatario (número con código de país)</label>
-                        <input type="text" id="quickJid" placeholder="54911xxxxxxxx@s.whatsapp.net">
-                    </div>
-                    <div class="input-group">
-                        <label>Mensaje</label>
-                        <input type="text" id="messageInput" placeholder="Escribe tu mensaje...">
-                    </div>
-                    <button class="btn btn-success" onclick="sendQuickMessage()">
-                        📤 Enviar
-                    </button>
-                </div>
-            </div>
-
-            <!-- Vista: Editor IA -->
-            <div class="main-content" id="view-editor">
-                <div class="page-header">
-                    <h1>🧠 Editor IA</h1>
-                    <p>Edita tu bot con inteligencia artificial</p>
-                </div>
-
-                <div class="editor-layout">
-                    <!-- Explorador de archivos -->
-                    <div class="file-explorer">
-                        <div class="file-explorer-header">
-                            <h3>📂 Archivos</h3>
-                            <button class="btn btn-smaller btn-secondary" onclick="createNewFile()">
-                                + Nuevo
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <span>📨</span>
+                                Envío Rápido de Mensajes
+                            </h3>
+                        </div>
+                        <div class="message-form">
+                            <div class="form-row">
+                                <div class="input-with-icon">
+                                    <span>👤</span>
+                                    <input type="text" id="quickJid" placeholder="Número o JID (ej: 54911...)">
+                                </div>
+                            </div>
+                            <textarea class="message-input" id="messageInput" placeholder="Escribe tu mensaje aquí..."></textarea>
+                            <button class="btn btn-primary" onclick="sendQuickMessage()" style="justify-self: start;">
+                                📤 Enviar Mensaje
                             </button>
                         </div>
-                        <div class="file-explorer-content" id="fileExplorer">
-                            <p class="empty-message">Carga la ruta del bot primero</p>
+                    </div>
+                </div>
+
+                <!-- Bots View -->
+                <div class="view-section" id="view-bots">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Gestión de Bots</h2>
+                            <p class="section-subtitle">Administra las instancias de tus bots</p>
                         </div>
+                        <button class="btn btn-primary" onclick="createSubbot()">
+                            ➕ Nuevo Bot
+                        </button>
                     </div>
 
-                    <!-- Editor de código -->
-                    <div class="code-editor-section">
-                        <div class="code-editor-header">
-                            <h3>
-                                <span id="currentFileName">Sin archivo abierto</span>
-                                <span class="editor-status" id="editorStatus"></span>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <span>📁</span>
+                                Ruta del Bot
                             </h3>
-                            <div class="editor-actions">
-                                <button class="btn btn-smaller btn-secondary" onclick="discardChanges()" title="Descartar cambios">
-                                    ↩ Descartar
-                                </button>
-                                <button class="btn btn-smaller btn-danger" onclick="deleteCurrentFile()" title="Eliminar archivo">
-                                    🗑 Eliminar
-                                </button>
-                                <button class="btn btn-smaller btn-success" id="saveFileBtn" onclick="saveCurrentFile()" disabled title="Guardar (Ctrl+S)">
-                                    💾 Guardar
-                                </button>
-                            </div>
                         </div>
-                        <textarea class="code-editor" id="codeEditor" placeholder="Selecciona un archivo para editar..."></textarea>
-                        <div class="editor-empty-state" id="editorEmptyState">
-                            <div class="icon">📝</div>
-                            <p>Selecciona un archivo del explorador<br>para ver y editar su contenido</p>
+                        <div class="path-input-group">
+                            <input type="text" id="botsViewPath" placeholder="Selecciona la carpeta de tu bot...">
+                            <button class="btn btn-secondary" onclick="selectBotFolderFromView()">📂 Explorar</button>
+                            <button class="btn btn-primary" onclick="saveBotPathFromView()">💾 Guardar</button>
                         </div>
                     </div>
 
-                    <!-- Panel de IA -->
-                    <div class="ai-panel" id="aiPanel">
-                        <div class="ai-panel-header">
-                            <h3>🤖 Asistente IA</h3>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <span>🤖</span>
+                                Control del Bot
+                            </h3>
                         </div>
-                        <div class="ai-panel-content">
-                            <div class="ai-prompt-section">
-                                <label>Describe los cambios que quieres hacer:</label>
-                                <textarea class="ai-prompt" id="aiPrompt" placeholder="Ej: Agrega un comando !ping que responda 'Pong'..."></textarea>
-                                <button class="btn btn-primary" style="margin-top: 10px; width: 100%;" onclick="sendToAI()">
-                                    ✨ Generar Código
-                                </button>
-                            </div>
-
-                            <div class="ai-loading" id="aiLoading">
-                                <div class="spinner"></div>
-                                <span>La IA está analizando...</span>
-                            </div>
-
-                            <div id="aiResponse"></div>
-
-                            <!-- Configuración de API -->
-                            <div class="config-section">
-                                <h4>🔑 OpenAI API Key</h4>
-                                <input type="password" class="api-key-input" id="openaiApiKey" placeholder="sk-...">
-                                <button class="btn btn-smaller btn-secondary" style="width: 100%;" onclick="saveApiKey()">
-                                    Guardar Clave
-                                </button>
-                            </div>
-
-                            <!-- Respaldos -->
-                            <div class="config-section">
-                                <h4>💾 Respaldos Recientes</h4>
-                                <div class="backups-list" id="backupList">
-                                    <p class="empty-message">Sin respaldos</p>
+                        <div class="bot-status-card">
+                            <div class="bot-info">
+                                <div class="bot-avatar-large">
+                                    🤖
+                                    <div class="status-dot" id="statusDot2" style="display: none;"></div>
                                 </div>
-                                <button class="btn btn-smaller btn-secondary" style="width: 100%; margin-top: 8px;" onclick="loadBackups()">
-                                    🔄 Actualizar Lista
-                                </button>
+                                <div class="bot-details">
+                                    <h3>Bot Externo</h3>
+                                    <div class="bot-status disconnected" id="botStatus2">
+                                        <span class="status-indicator stopped"></span>
+                                        <span id="statusText2">Sin conectar</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bot-controls">
+                                <button class="btn btn-success" onclick="startExternalBot()">▶ Iniciar</button>
+                                <button class="btn btn-danger" onclick="stopExternalBot()">■ Detener</button>
+                                <button class="btn btn-secondary" onclick="restartExternalBot()">🔄 Reiniciar</button>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Editor View -->
+                <div class="view-section" id="view-editor">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Editor de Código</h2>
+                            <p class="section-subtitle">Edita archivos con asistencia de IA</p>
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            <button class="btn btn-secondary" onclick="createNewFile()">📄 Nuevo Archivo</button>
+                            <button class="btn btn-primary" onclick="saveCurrentFile()">💾 Guardar</button>
+                        </div>
+                    </div>
+
+                    <div class="editor-container">
+                        <div class="card" style="margin-bottom: 0; height: 100%;">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <span>📂</span>
+                                    Archivos
+                                </h3>
+                                <button class="btn btn-secondary" onclick="loadBotFiles()" style="padding: 8px 16px; font-size: 12px;">
+                                    🔄 Recargar
+                                </button>
+                            </div>
+                            <div class="file-tree" id="fileExplorer">
+                                <div class="empty-state">
+                                    <span>📁</span>
+                                    <h3>Sin archivos</h3>
+                                    <p>Primero configura la ruta del bot</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="editor-main">
+                            <div class="editor-header">
+                                <div class="editor-tabs">
+                                    <div class="editor-tab active" id="currentFileName">Sin archivo abierto</div>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <span id="editorStatus" class="editor-status saved">Sin archivo</span>
+                                    <button class="btn btn-danger" onclick="deleteCurrentFile()" style="padding: 8px 16px; font-size: 12px;">🗑️</button>
+                                </div>
+                            </div>
+                            <textarea class="code-editor" id="codeEditor" placeholder="Selecciona un archivo para editar..."></textarea>
+                            
+                            <!-- AI Panel -->
+                            <div class="ai-panel" id="aiPanel" style="display: none;">
+                                <div class="ai-header">
+                                    <div class="ai-avatar">✨</div>
+                                    <div class="ai-info">
+                                        <h3>Asistente IA</h3>
+                                        <span>GPT-4 Powered</span>
+                                    </div>
+                                </div>
+                                <div class="ai-prompt-area">
+                                    <textarea id="aiPrompt" placeholder="Describe los cambios que quieres hacer..."></textarea>
+                                    <div id="aiResponse"></div>
+                                    <div style="display: flex; gap: 12px;">
+                                        <button class="btn btn-primary" onclick="sendToAI()" style="flex: 1;">
+                                            ✨ Generar Código
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="clearAIPrompt()">
+                                            🧹 Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications View -->
+                <div class="view-section" id="view-notifications">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Notificaciones</h2>
+                            <p class="section-subtitle">Historial y actualizaciones del sistema</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="checkForUpdates()">
+                            🔄 Verificar Actualizaciones
+                        </button>
+                    </div>
+
+                    <div class="two-column">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <span>🔔</span>
+                                    Notificaciones Recientes
+                                </h3>
+                            </div>
+                            <div id="notificationsList">
+                                <div class="notification-item update">
+                                    <div class="notification-icon">📦</div>
+                                    <div class="notification-content">
+                                        <div class="notification-title">Nueva Versión Disponible</div>
+                                        <div class="notification-message">La versión 0.0.1 está lista para usar</div>
+                                        <div class="notification-time">Hace 5 minutos</div>
+                                    </div>
+                                </div>
+                                <div class="notification-item info">
+                                    <div class="notification-icon">ℹ️</div>
+                                    <div class="notification-content">
+                                        <div class="notification-title">Bienvenido a XPE-BOT</div>
+                                        <div class="notification-message">Panel de control rediseñado con amor</div>
+                                        <div class="notification-time">Hace 10 minutos</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <span>📊</span>
+                                    Estado del Sistema
+                                </h3>
+                            </div>
+                            <div id="systemInfo">
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <h4>Versión Actual</h4>
+                                        <p>0.0.1 - K-VRC Edition</p>
+                                    </div>
+                                    <span style="color: var(--k-orange-primary); font-weight: 600;">v0.0.1</span>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <h4>Última Actualización</h4>
+                                        <p>Verificando automáticamente</p>
+                                    </div>
+                                    <span style="color: var(--k-success);">✓ Actualizado</span>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <h4>Propietarios Conectados</h4>
+                                        <p>Usuarios con acceso al sistema</p>
+                                    </div>
+                                    <span id="ownersCount">1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings View -->
+                <div class="view-section" id="view-settings">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">Configuración</h2>
+                            <p class="section-subtitle">Personaliza tu experiencia</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="settings-group">
+                            <div class="settings-group-title">🤖 Configuración del Bot</div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <h4>Ruta del Bot</h4>
+                                    <p>Carpeta donde está instalado tu bot de WhatsApp</p>
+                                </div>
+                            </div>
+                            <div class="path-input-group">
+                                <input type="text" id="botPath" placeholder="Selecciona la carpeta del bot...">
+                                <button class="btn btn-secondary" onclick="selectBotFolder()">📂 Explorar</button>
+                                <button class="btn btn-primary" onclick="saveBotPath()">💾 Guardar</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="settings-group-title">🔑 API de OpenAI</div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <h4>Clave de API</h4>
+                                    <p>Necesaria para las funciones de IA</p>
+                                </div>
+                            </div>
+                            <div class="input-with-icon">
+                                <span>🔑</span>
+                                <input type="password" id="openaiApiKey" placeholder="sk-...">
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <button class="btn btn-primary" onclick="saveApiKey()">💾 Guardar Clave</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="settings-group-title">⚙️ Preferencias</div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <h4>Verificar Actualizaciones</h4>
+                                    <p>Buscar nuevas versiones automáticamente</p>
+                                </div>
+                                <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <h4>Notificaciones deWhatsApp</h4>
+                                    <p>Mostrar alertas del bot en el panel</p>
+                                </div>
+                                <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <h4>Guardar Backups Automáticos</h4>
+                                    <p>Crear respaldo antes de cada edición</p>
+                                </div>
+                                <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification" id="notification">
+        <div class="notification-content">
+            <span class="notification-icon" id="notificationIcon">✓</span>
+            <div class="notification-text">
+                <div class="notification-title" id="notificationTitle">Éxito</div>
+                <div class="notification-message" id="notificationMessage">Operación completada</div>
             </div>
         </div>
     </div>
 
-    <!-- Notificaciones -->
-    <div class="notification" id="notification"></div>
-
-    <!-- Script Principal -->
     <script src="renderer.js"></script>
 </body>
 </html>

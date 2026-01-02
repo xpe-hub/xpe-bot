@@ -1,7 +1,7 @@
 {
   "name": "xpe-bot-panel",
-  "version": "3.0.0-beta",
-  "description": "Panel de control para XPE-BOT v3 con Sistema de Actualizaciones y Colaboracion Multi-Usuario",
+  "version": "0.0.1",
+  "description": "Panel de control para XPE-BOT - Diseño K-VRC Inspired",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
